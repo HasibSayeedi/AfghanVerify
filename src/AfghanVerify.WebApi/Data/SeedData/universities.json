@@ -1,0 +1,123 @@
+[
+  {
+    "Id": "11111111-1111-1111-1111-111111111111",
+    "NameDari": "پوهنتون کابل",
+    "NameEnglish": "Kabul University",
+    "NamePashto": "د کابل پوهنتون",
+    "Code": "KU",
+    "Location": "کابل",
+    "IsActive": true,
+    "PrimaryColor": "#004B87",
+    "LogoUrl": "/assets/logos/ku-logo.png"
+  },
+  {
+    "Id": "21111111-1111-1111-1111-111111111111",
+    "NameDari": "پوهنتون پولی‌تخنیک کابل",
+    "NameEnglish": "Kabul Polytechnic University",
+    "NamePashto": "د کابل پولی تخنیک پوهنتون",
+    "Code": "KPU",
+    "Location": "کابل",
+    "IsActive": true,
+    "PrimaryColor": "#0284c7",
+    "LogoUrl": "/assets/logos/kpu-logo.png"
+  },
+  {
+    "Id": "22222222-2222-2222-2222-222222222222",
+    "NameDari": "پوهنتون هرات",
+    "NameEnglish": "Herat University",
+    "NamePashto": "د هرات پوهنتون",
+    "Code": "HU",
+    "Location": "هرات",
+    "IsActive": true,
+    "PrimaryColor": "#0c4a60",
+    "LogoUrl": "/assets/logos/hu-logo.png"
+  },
+  {
+    "Id": "33333333-3333-3333-3333-333333333333",
+    "NameDari": "پوهنتون بلخ",
+    "NameEnglish": "Balkh University",
+    "NamePashto": "د بلخ پوهنتون",
+    "Code": "BU",
+    "Location": "بلخ",
+    "IsActive": true,
+    "PrimaryColor": "#155e75",
+    "LogoUrl": "/assets/logos/bu-logo.png"
+  },
+  {
+    "Id": "44444444-4444-4444-4444-444444444444",
+    "NameDari": "پوهنتون ننگرهار",
+    "NameEnglish": "Nangarhar University",
+    "NamePashto": "د ننګرهار پوهنتون",
+    "Code": "NU",
+    "Location": "ننگرهار",
+    "IsActive": true,
+    "PrimaryColor": "#065f46",
+    "LogoUrl": "/assets/logos/nu-logo.png"
+  },
+  {
+    "Id": "55555555-5555-5555-5555-555555555555",
+    "NameDari": "پوهنتون قندهار",
+    "NameEnglish": "Kandahar University",
+    "NamePashto": "د کندهار پوهنتون",
+    "Code": "KD",
+    "Location": "قندهار",
+    "IsActive": true,
+    "PrimaryColor": "#9a3412",
+    "LogoUrl": "/assets/logos/kdu-logo.png"
+  },
+  {
+    "Id": "66666666-6666-6666-6666-666666666666",
+    "NameDari": "پوهنتون بدخشان",
+    "NameEnglish": "Badakhshan University",
+    "NamePashto": "د بدخشان پوهنتون",
+    "Code": "BDXU",
+    "Location": "بدخشان",
+    "IsActive": true,
+    "PrimaryColor": "#3730a3",
+    "LogoUrl": "/assets/logos/bdxu-logo.png"
+  },
+  {
+    "Id": "17777777-7777-7777-7777-777777777777",
+    "NameDari": "پوهنتون خوست (شیخ زاید)",
+    "NameEnglish": "Khost University",
+    "NamePashto": "د شېخ زاید پوهنتون",
+    "Code": "KSTU",
+    "Location": "خوست",
+    "IsActive": true,
+    "PrimaryColor": "#a16207",
+    "LogoUrl": "/assets/logos/kstu-logo.png"
+  },
+  {
+    "Id": "37777777-7777-7777-7777-777777777777",
+    "NameDari": "پوهنتون بامیان",
+    "NameEnglish": "Bamyan University",
+    "NamePashto": "د بامیان پوهنتون",
+    "Code": "BMU",
+    "Location": "بامیان",
+    "IsActive": true,
+    "PrimaryColor": "#b45309",
+    "LogoUrl": "/assets/logos/bmu-logo.png"
+  },
+  {
+    "Id": "77777777-7777-7777-7777-777777777777",
+    "NameDari": "پوهنتون کاتب",
+    "NameEnglish": "Kateb University",
+    "NamePashto": "کاتب پوهنتون",
+    "Code": "KAT",
+    "Location": "کابل",
+    "IsActive": true,
+    "PrimaryColor": "#7c2d12",
+    "LogoUrl": "/assets/logos/kateb-logo.png"
+  },
+  {
+    "Id": "88888888-8888-8888-8888-888888888888",
+    "NameDari": "پوهنتون کاردان",
+    "NameEnglish": "Kardan University",
+    "NamePashto": "کاردان پوهنتون",
+    "Code": "KRD",
+    "Location": "کابل",
+    "IsActive": true,
+    "PrimaryColor": "#1e3a8a",
+    "LogoUrl": "/assets/logos/kardan-logo.png"
+  }
+]

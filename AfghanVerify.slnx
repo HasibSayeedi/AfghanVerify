@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AfghanVerify.Core/AfghanVerify.Core.csproj" />
+    <Project Path="src/AfghanVerify.Infrastructure/AfghanVerify.Infrastructure.csproj" />
+    <Project Path="src/AfghanVerify.WebApi/AfghanVerify.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AfghanVerify.Infrastructure.Tests/AfghanVerify.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,8 @@
+import type { CertificateData } from '../../../types';
+
+export default function StudentProfile({ data }: { data: CertificateData }) {
+  const facts = [['Father’s name', data.fatherName], ['Tazkira', data.tazkiraNumber], ['Faculty', data.faculty], ['Department', data.department], ['Graduation year', String(data.graduationYear)], ['GPA', data.gpa], ['Issuance system', data.issuanceSystem]];
+  return <section className="credential-overview-paper bg-white py-7"><div className="flex flex-col gap-6 sm:flex-row sm:items-center"><div className="grid h-28 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl border-4 border-white bg-slate-100 shadow-lg">{data.profilePicture ? <img src={data.profilePicture} className="h-full w-full object-cover" alt={`${data.studentName} portrait`} /> : <svg viewBox="0 0 24 24" className="h-12 w-12 text-slate-400" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg>}</div><div><p className="text-xs font-bold uppercase tracking-[.2em] text-slate-400">Graduate</p><h3 className="mt-1 text-3xl font-black tracking-tight text-slate-950">{data.studentName}</h3><p className="mt-2 text-sm text-slate-500">Credential details verified against the national registry.</p></div></div>
+    <dl className="mt-7 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">{facts.map(([label,value])=><div key={label} className="border-b border-slate-100 pb-3"><dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</dt><dd className="mt-1 font-bold text-slate-800">{value || '—'}</dd></div>)}</dl>
+  </section>;
+}
