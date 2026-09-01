@@ -16,6 +16,9 @@ Afghan Verify connects accredited universities, the Ministry of Higher Education
 - High-resolution A4 PDF generation matching the visible credential layout
 - Real-time status notifications through SignalR
 - Soft-deleted staff accounts and self-service password management
+- SMTP-backed password recovery with expiring ASP.NET Core Identity tokens
+- University-issued record history with secure pending correction and cancellation
+- Audited credential lifecycle actions, including suspension, reinstatement, revocation, and replacement
 
 ## Security architecture
 
@@ -27,7 +30,9 @@ Afghan Verify applies defense in depth across authentication, authorization, dat
 - JWT bearer tokens include role, user identity, and university-scope claims.
 - Account lockout limits repeated failed login attempts.
 - Authenticated staff can securely change their own passwords by confirming the current password.
-- Administrators can reset staff passwords through Identity's tokenized reset workflow; plaintext passwords are never stored.
+- Password recovery uses expiring, single-purpose ASP.NET Core Identity reset tokens delivered through configured institutional SMTP.
+- Recovery requests return a generic response to reduce account-enumeration risk and are protected by rate limiting.
+- Administrators can securely reset staff passwords without storing plaintext credentials.
 
 ### Multi-tier RBAC
 
@@ -49,6 +54,8 @@ University tenancy is enforced by the signed `university_id` JWT claim on the AP
 - Signing keys are loaded from configuration or a deployment secret store.
 - Cryptographically random nine-digit serials are prefixed by university code, such as `KU-491029481`.
 - A unique database index and serializable issuance transaction protect against verification-code collisions.
+- Correcting a pending record regenerates its HMAC signature; the previous signature cannot validate modified student or transcript data.
+- Approved credentials are immutable. Corrections are issued as linked replacements so the original audit chain remains intact.
 
 ### Validation and privacy controls
 
@@ -58,6 +65,8 @@ University tenancy is enforced by the signed `university_id` JWT claim on the AP
 - University identity claims must match the university included in issuance requests.
 - Invalid or inactive universities, faculties, and departments are rejected instead of silently falling back.
 - Staff deletion is implemented as soft deletion and permanent lockout to preserve referential integrity and audit history.
+- Universities may update or cancel only their own records and only while the credential is in `PendingMinistry` state.
+- Cancellation reasons, credential corrections, Ministry decisions, lifecycle actions, and staff administration events are retained in audit logs.
 
 ## Credential lifecycle
 
@@ -68,11 +77,21 @@ University Registrar
        v
 Pending Ministry Review
        |
+       +-- Correct --> Re-sign updated pending data --> Ministry queue
+       |
+       +-- Cancel  --> Cancelled + retained audit history
+       |
        +-- Approve --> Verified public credential
        |
        +-- Reject  --> Returned with review remarks
-                         |
-                         +-- SignalR status notification
+       |
+       +-- Status changes --> SignalR notification
+
+Verified Credential
+       |
+       +-- Suspend / Reinstate / Revoke
+       |
+       +-- Corrected replacement --> Original becomes Superseded
 ```
 
 1. A university registrar selects the institution, faculty, and department and enters the student record.
@@ -83,6 +102,8 @@ Pending Ministry Review
 6. The record enters the Ministry review queue.
 7. Status changes are broadcast through SignalR.
 8. Approved credentials become available through public code or QR verification.
+9. Before approval, the issuing university can correct or cancel its own pending submission.
+10. After approval, corrections use a linked replacement credential instead of mutating the signed original.
 
 ## Verification experience
 
@@ -110,6 +131,12 @@ PDF export captures the same visible DOM credential instead of a separate templa
 - Immediate verification-code and QR display after successful issuance
 - Diploma and transcript file-link configuration
 - Automatic scroll-to-success feedback
+- Institution-scoped `Issued records` workspace with live search
+- Clickable credential detail modal with student, document, link, and transcript information
+- Secure correction of pending records while preserving the verification code
+- Automatic HMAC regeneration after every accepted pending correction
+- Audited cancellation of pending submissions with a required official reason
+- Read-only finalized records and linked replacement workflow for approved credentials
 
 ### Ministry portal
 
@@ -118,6 +145,11 @@ PDF export captures the same visible DOM credential instead of a separate templa
 - Safe Cancel action in the review dialog
 - Live status updates through SignalR
 - Automatic return to the top of the review list after processing
+- Pending Queue and processed History views
+- Live history search by student, university, or archive code
+- Week, month, and year statistics for pending, approved, and rejected records
+- Read-only processed-record details and rejection reasons
+- Controlled suspension, reinstatement, and revocation with official reasons
 
 ### User management
 
@@ -135,6 +167,15 @@ PDF export captures the same visible DOM credential instead of a separate templa
 - Current-password ownership verification
 - Independent password visibility controls
 - Self-service password updates for every authenticated role
+
+### Password recovery
+
+- Compact, responsive forgot-password and reset-password views
+- Institutional-email validation with custom inline errors
+- SMTP delivery through configuration-managed credentials
+- Generic success responses that do not reveal whether an account exists
+- Expiring reset links backed by ASP.NET Core Identity Data Protection
+- Persistent Data Protection keys supported in container deployments
 
 ## Technology stack
 
@@ -160,7 +201,7 @@ AfghanVerify/
 |       |-- features/account/         Personal profile and password settings
 |       |-- features/admin/           Multi-tier staff management
 |       |-- features/ministry-portal/ Ministry review workflow
-|       |-- features/university-portal/ Credential issuance
+|       |-- features/university-portal/ Credential issuance and issued-record management
 |       `-- features/verification/    Public verification and PDF views
 |-- src/
 |   |-- AfghanVerify.Core/            Domain entities
@@ -320,13 +361,21 @@ npm run build
 | Method | Route | Access |
 | --- | --- | --- |
 | `POST` | `/api/auth/login` | Public |
+| `POST` | `/api/auth/forgot-password` | Public, rate limited |
+| `POST` | `/api/auth/reset-password` | Public, token required |
 | `PUT` | `/api/account/password` | Authenticated staff |
 | `GET` | `/api/universities` | Public |
 | `GET` | `/api/verify/{code}` | Public |
 | `POST` | `/api/certificates/issue` | University Registrar |
+| `GET` | `/api/certificates/issued` | University Registrar, institution scoped |
+| `PUT` | `/api/certificates/{code}/pending` | University Registrar, pending records only |
+| `POST` | `/api/certificates/{code}/cancel` | University Registrar, pending records only |
 | `GET` | `/api/ministry/queue` | Ministry |
+| `GET` | `/api/ministry/history` | Ministry |
 | `POST` | `/api/ministry/review` | Ministry |
+| `POST` | `/api/ministry/lifecycle` | Ministry |
 | `GET/POST/PUT/PATCH` | `/api/admin/users` | Super Admin or scoped University Admin |
+| `GET` | `/api/admin/audit-logs` | Super Admin |
 | SignalR | `/notificationHub` | Application clients |
 
 ## Production deployment checklist
@@ -342,6 +391,8 @@ npm run build
 - Configure CSP, HSTS, rate limiting, health checks, monitoring, and alerting at the hosting layer.
 - Rotate JWT and HMAC keys according to an established key-management procedure.
 - Run release builds and automated tests before deployment.
+- Persist ASP.NET Core Data Protection keys so password-reset tokens remain valid across container restarts.
+- Configure a trusted institutional SMTP provider and use provider-issued credentials rather than personal account passwords.
 
 ## Responsible handling
 
