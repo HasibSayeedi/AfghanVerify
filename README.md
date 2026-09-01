@@ -507,6 +507,8 @@ Academic credentials and national identity information are sensitive. Production
 
 ---
 
-## License
+## 📄 License
 
-No open-source license is currently included. Add an appropriate license before public redistribution or accepting external contributions.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Copyright (c) 2026 Hasibullah Sayeedi. All rights reserved.
