@@ -24,9 +24,38 @@ public sealed record IssueCertificateDto(
     [param: StringLength(128)] string? LegacyMaktoubNumber,
     [param: OptionalHttpUrl, StringLength(2048)] string? DiplomaFileUrl,
     [param: OptionalHttpUrl, StringLength(2048)] string? TranscriptFileUrl,
+    [param: MaxLength(500)] IReadOnlyList<SubjectGradeDto>? Subjects,
+    [param: RegularExpression("^[A-Za-z0-9]{2,4}-(?:[0-9]{9}|[A-Fa-f0-9]{5})$", ErrorMessage = "Superseded credential code is invalid.")] string? SupersedesVerificationCode = null);
+
+public sealed record UpdatePendingCertificateDto(
+    [param: Required, StringLength(100), AfghanPersonName] string FirstName,
+    [param: Required, StringLength(100), AfghanPersonName] string LastName,
+    [param: Required, StringLength(100), AfghanPersonName] string FatherName,
+    [param: Required(ErrorMessage = "Tazkira number is required."), RegularExpression("^[0-9]{13}$", ErrorMessage = "Tazkira number must contain exactly 13 digits.")] string TazkiraNumber,
+    Guid FacultyId,
+    Guid DepartmentId,
+    [param: Range(2000, 2045)] int GraduationYear,
+    [param: Required, RegularExpression("^(Both|Diploma|DiplomaOnly|Transcript|TranscriptOnly)$")] string DocumentType,
+    [param: Required, RegularExpression(@"^(?:[1-3](?:\.\d{1,2})?|4(?:\.0{1,2})?)$", ErrorMessage = "GPA must be between 1.00 and 4.00 with no more than two decimal places.")] string Gpa,
+    [param: OptionalImageHttpUrl, StringLength(2048)] string? ProfilePicture,
+    [param: Required, RegularExpression("^(DigitalFirst|Legacy)$")] string IssuanceSystem,
+    [param: StringLength(128)] string? LegacyMaktoubNumber,
+    [param: OptionalHttpUrl, StringLength(2048)] string? DiplomaFileUrl,
+    [param: OptionalHttpUrl, StringLength(2048)] string? TranscriptFileUrl,
     [param: MaxLength(500)] IReadOnlyList<SubjectGradeDto>? Subjects);
 
-public sealed record LoginRequestDto([param: Required] string Username, [param: Required] string Password);
+public sealed record UniversityIssuedCredentialDto(
+    string VerificationCode, string Status, DateTime IssuedAt,
+    string FirstName, string LastName, string FatherName, string TazkiraNumber,
+    Guid UniversityId, Guid FacultyId, Guid DepartmentId, string Faculty, string Department,
+    int GraduationYear, string DocumentType, string Gpa, string ProfilePicture,
+    string IssuanceSystem, string LegacyMaktoubNumber, string DiplomaFileUrl, string TranscriptFileUrl,
+    string? SupersedesVerificationCode, IReadOnlyList<SubjectGradeDto> Subjects);
+
+public sealed record CancelPendingCertificateDto(
+    [param: Required, StringLength(500, MinimumLength = 10)] string Reason);
+
+public sealed record LoginRequestDto([param: Required, EmailAddress] string Username, [param: Required] string Password);
 public sealed record DepartmentDto(Guid Id, string Name);
 public sealed record FacultyDto(Guid Id, string Name, IReadOnlyList<DepartmentDto> Departments);
 public sealed record UniversityDto(Guid Id, string NameEnglish, string NameDari, string NamePashto, string Code, string LogoUrl,

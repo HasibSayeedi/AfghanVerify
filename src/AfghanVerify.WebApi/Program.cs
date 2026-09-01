@@ -1,18 +1,30 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using AfghanVerify.Infrastructure.Data;
 using AfghanVerify.Infrastructure.Identity;
 using AfghanVerify.Infrastructure.Services;
 using AfghanVerify.WebApi.Configuration;
+using AfghanVerify.WebApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+// Local developer settings are convenient defaults, but deployment environment
+// variables and command-line arguments must always remain authoritative.
+builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddCommandLine(args);
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("AfghanVerify");
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
@@ -20,13 +32,59 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
         options.Password.RequireUppercase = true; options.Password.RequireNonAlphanumeric = true;
         options.Lockout.MaxFailedAccessAttempts = 5; options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     }).AddRoles<IdentityRole<Guid>>().AddEntityFrameworkStores<ApplicationDbContext>().AddSignInManager().AddDefaultTokenProviders();
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+    options.TokenLifespan = TimeSpan.FromMinutes(builder.Configuration.GetValue("PasswordRecovery:TokenLifetimeMinutes", 30)));
 
 builder.Services.AddOptions<JwtOptions>().Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
     .Validate(o => o.Key.Length >= 32, "Jwt:Key must contain at least 32 characters.")
     .Validate(o => !string.IsNullOrWhiteSpace(o.Issuer) && !string.IsNullOrWhiteSpace(o.Audience), "JWT issuer and audience are required.").ValidateOnStart();
 builder.Services.AddOptions<CryptographyOptions>().Bind(builder.Configuration.GetSection(CryptographyOptions.SectionName))
-    .Validate(o => !string.IsNullOrWhiteSpace(o.SigningKey), "Cryptography:SigningKey is required.").ValidateOnStart();
+    .Validate(o => !string.IsNullOrWhiteSpace(o.SigningKey), "Cryptography:SigningKey is required.")
+    .Validate(o => !string.IsNullOrWhiteSpace(o.ActiveKeyId), "Cryptography:ActiveKeyId is required.").ValidateOnStart();
 builder.Services.AddScoped<CryptographyService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddOptions<EmailOptions>().Bind(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddOptions<PasswordRecoveryOptions>().Bind(builder.Configuration.GetSection(PasswordRecoveryOptions.SectionName))
+    .Validate(options => options.TokenLifetimeMinutes is >= 5 and <= 1440,
+        "PasswordRecovery:TokenLifetimeMinutes must be between 5 and 1440 minutes.").ValidateOnStart();
+builder.Services.AddSingleton<IPasswordRecoveryEmailSender, SmtpPasswordRecoveryEmailSender>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            type = "https://httpstatuses.com/429",
+            title = "Too many requests",
+            status = StatusCodes.Status429TooManyRequests,
+            detail = "Too many attempts were received. Please wait before trying again."
+        }, cancellationToken);
+    };
+    options.AddPolicy("login", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst, AutoReplenishment = true
+        }));
+    options.AddPolicy("public-verification", context => RateLimitPartition.GetSlidingWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 60, Window = TimeSpan.FromMinutes(1), SegmentsPerWindow = 6, QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst, AutoReplenishment = true
+        }));
+    options.AddPolicy("password-recovery", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5, Window = TimeSpan.FromMinutes(15), QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst, AutoReplenishment = true
+        }));
+});
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
@@ -47,6 +105,7 @@ app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

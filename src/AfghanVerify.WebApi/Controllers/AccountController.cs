@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using AfghanVerify.Infrastructure.Identity;
+using AfghanVerify.Infrastructure.Data;
 using AfghanVerify.WebApi.Dtos;
+using AfghanVerify.WebApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,8 +15,11 @@ namespace AfghanVerify.WebApi.Controllers;
 public sealed class AccountController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ApplicationDbContext _db;
+    private readonly AuditService _audit;
 
-    public AccountController(UserManager<ApplicationUser> userManager) => _userManager = userManager;
+    public AccountController(UserManager<ApplicationUser> userManager, ApplicationDbContext db, AuditService audit)
+    { _userManager = userManager; _db = db; _audit = audit; }
 
     [HttpPut("password")]
     public async Task<IActionResult> ChangePassword(ChangeOwnPasswordDto request)
@@ -37,6 +42,8 @@ public sealed class AccountController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
+        _audit.Record("OwnPasswordChanged", nameof(ApplicationUser), user.Id.ToString());
+        await _db.SaveChangesAsync();
         return Ok(new { message = "Your password has been updated successfully." });
     }
 }

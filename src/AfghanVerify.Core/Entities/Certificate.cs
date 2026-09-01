@@ -14,6 +14,11 @@ public sealed class Certificate
     public string VerificationCode { get; set; } = string.Empty;
     public string DigitalHash { get; set; } = string.Empty;
     public int SignatureVersion { get; set; } = 3;
-    public string Status { get; set; } = "PendingMinistry";
+    public string SigningKeyId { get; set; } = "primary";
+    public string Status { get; set; } = CertificateStatuses.PendingMinistry;
+    public Guid? SupersedesCertificateId { get; set; }
+    public Certificate? SupersedesCertificate { get; set; }
+    public ICollection<Certificate> Replacements { get; set; } = new List<Certificate>();
+    public byte[] RowVersion { get; set; } = [];
     public Student? Student { get; set; }
 }

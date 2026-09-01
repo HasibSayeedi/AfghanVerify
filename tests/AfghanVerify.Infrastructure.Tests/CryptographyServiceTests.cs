@@ -33,6 +33,22 @@ public sealed class CryptographyServiceTests
     }
 
     [Fact]
+    public void CorrectedPendingRecord_IsTrustedOnlyAfterItIsResigned()
+    {
+        var (student, certificate) = CreateRecord();
+        var service = CreateService();
+        certificate.DigitalHash = service.SignDocument(student, certificate);
+        var originalSignature = certificate.DigitalHash;
+
+        student.FirstName = "Aminah";
+        Assert.False(service.VerifyDocument(student, certificate));
+
+        certificate.DigitalHash = service.SignDocument(student, certificate);
+        Assert.NotEqual(originalSignature, certificate.DigitalHash);
+        Assert.True(service.VerifyDocument(student, certificate));
+    }
+
+    [Fact]
     public void VerifyDocument_ReturnsTrue_AfterSqlServerDateTimeRoundTrip()
     {
         var (student, certificate) = CreateRecord();
@@ -61,6 +77,40 @@ public sealed class CryptographyServiceTests
         certificate.IssueDate = DateTime.SpecifyKind(certificate.IssueDate, DateTimeKind.Unspecified);
         Assert.True(service.VerifyDocument(student, certificate));
         student.DepartmentId = Guid.Parse("60000000-0000-0000-0000-000000000006");
+        Assert.False(service.VerifyDocument(student, certificate));
+    }
+
+    [Fact]
+    public void Version4Signature_CoversReplacementChain()
+    {
+        var (student, certificate) = CreateRecord();
+        certificate.SignatureVersion = 4;
+        certificate.SupersedesCertificateId = Guid.Parse("70000000-0000-0000-0000-000000000007");
+        var service = CreateService();
+        certificate.DigitalHash = service.SignDocument(student, certificate);
+
+        Assert.True(service.VerifyDocument(student, certificate));
+        certificate.SupersedesCertificateId = Guid.Parse("80000000-0000-0000-0000-000000000008");
+        Assert.False(service.VerifyDocument(student, certificate));
+    }
+
+    [Fact]
+    public void Version5Signature_UsesAndCoversSigningKeyId()
+    {
+        var legacyKey = Convert.ToBase64String(Encoding.UTF8.GetBytes("a-different-legacy-random-key-32b"));
+        var service = new CryptographyService(Options.Create(new CryptographyOptions
+        {
+            ActiveKeyId = "primary",
+            SigningKey = Convert.ToBase64String(Encoding.UTF8.GetBytes("a-production-key-must-be-random-32b")),
+            VerificationKeys = new Dictionary<string, string> { ["legacy"] = legacyKey }
+        }));
+        var (student, certificate) = CreateRecord();
+        certificate.SignatureVersion = 5;
+        certificate.SigningKeyId = "legacy";
+        certificate.DigitalHash = service.SignDocument(student, certificate);
+
+        Assert.True(service.VerifyDocument(student, certificate));
+        certificate.SigningKeyId = "primary";
         Assert.False(service.VerifyDocument(student, certificate));
     }
 

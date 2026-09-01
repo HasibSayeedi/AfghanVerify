@@ -36,6 +36,18 @@ services:
       Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-30}
       Cryptography__SigningKey: ${CRYPTOGRAPHY_SIGNING_KEY:?Set CRYPTOGRAPHY_SIGNING_KEY in the root .env file}
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:8080}
+      Email__Host: ${SMTP_HOST:?Set SMTP_HOST in the root .env file}
+      Email__Port: ${SMTP_PORT:-587}
+      Email__Username: ${SMTP_USERNAME:-}
+      Email__Password: ${SMTP_PASSWORD:-}
+      Email__FromAddress: ${SMTP_FROM_ADDRESS:?Set SMTP_FROM_ADDRESS in the root .env file}
+      Email__FromName: ${SMTP_FROM_NAME:-Afghan Verify}
+      Email__EnableSsl: ${SMTP_ENABLE_SSL:-true}
+      PasswordRecovery__FrontendBaseUrl: ${PUBLIC_FRONTEND_URL:-http://localhost:8080}
+      PasswordRecovery__TokenLifetimeMinutes: ${PASSWORD_RESET_TOKEN_MINUTES:-30}
+      DataProtection__KeysPath: /var/afghanverify-keys
+    volumes:
+      - data-protection-keys:/var/afghanverify-keys
     depends_on:
       database:
         condition: service_healthy
@@ -58,6 +70,7 @@ services:
 
 volumes:
   sqlserver-data:
+  data-protection-keys:
 
 networks:
   afghanverify-network:

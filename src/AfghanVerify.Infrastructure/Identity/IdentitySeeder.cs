@@ -53,6 +53,9 @@ public static class IdentitySeeder
                 user.UniversityId = universityId;
                 user.EmailConfirmed = true;
                 user.LockoutEnabled = true;
+                // A user that remains explicitly configured as a bootstrap account is
+                // authoritative and must be recoverable after an accidental soft delete.
+                user.IsDeleted = false;
                 EnsureSucceeded(await userManager.UpdateAsync(user), $"update user '{username}'");
             }
 

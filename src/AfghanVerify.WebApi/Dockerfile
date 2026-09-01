@@ -19,6 +19,7 @@ RUN dotnet publish src/AfghanVerify.WebApi/AfghanVerify.WebApi.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish ./
+RUN mkdir -p /var/afghanverify-keys && chown -R $APP_UID:$APP_UID /var/afghanverify-keys
 
 ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \

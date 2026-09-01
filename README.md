@@ -236,6 +236,19 @@ Create `src/AfghanVerify.WebApi/appsettings.Local.json`. This file is intentiona
   },
   "Cryptography": {
     "SigningKey": "replace-with-a-base64-encoded-random-key-containing-at-least-32-bytes"
+  },
+  "Email": {
+    "Host": "smtp.example.gov.af",
+    "Port": 587,
+    "Username": "no-reply@example.gov.af",
+    "Password": "replace-with-the-smtp-account-password",
+    "FromAddress": "no-reply@example.gov.af",
+    "FromName": "Afghan Verify",
+    "EnableSsl": true
+  },
+  "PasswordRecovery": {
+    "FrontendBaseUrl": "http://localhost:5173",
+    "TokenLifetimeMinutes": 30
   }
 }
 ```
@@ -246,6 +259,13 @@ Environment variables can be used instead:
 $env:Jwt__Key = "your-random-jwt-key"
 $env:Cryptography__SigningKey = "your-base64-hmac-key"
 $env:ConnectionStrings__DefaultConnection = "your-sql-server-connection-string"
+$env:Email__Host = "smtp.example.gov.af"
+$env:Email__Port = "587"
+$env:Email__Username = "no-reply@example.gov.af"
+$env:Email__Password = "your-smtp-password"
+$env:Email__FromAddress = "no-reply@example.gov.af"
+$env:Email__EnableSsl = "true"
+$env:PasswordRecovery__FrontendBaseUrl = "http://localhost:5173"
 ```
 
 Never commit real JWT keys, HMAC keys, bootstrap passwords, database credentials, `.env` files, certificates, or `appsettings.Local.json`.

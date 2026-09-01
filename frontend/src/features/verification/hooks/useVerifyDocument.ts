@@ -13,6 +13,7 @@ export function useVerifyDocument() {
   const [code, setCode] = useState(''); const [result, setResult] = useState<CertificateData | null>(null);
   const [error, setError] = useState(''); const [loading, setLoading] = useState(false); const [showScanner, setShowScanner] = useState(false);
   const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const resultCode = result?.verificationCode;
 
   const verify = useCallback(async (input: string) => {
     const normalized = extractCode(input);
@@ -24,13 +25,21 @@ export function useVerifyDocument() {
   }, []);
 
   useEffect(() => {
-    if (!result || result.status !== 'PendingMinistry') return;
+    if (!resultCode) return;
     const connection = new signalR.HubConnectionBuilder().withUrl(hubUrl).withAutomaticReconnect().build();
     connectionRef.current = connection;
-    connection.on('ReceiveStatusUpdate', (update: { status: string; remarks: string }) => setResult(current => current ? { ...current, ...update } : current));
-    void connection.start().then(() => connection.invoke('SubscribeToCertificate', result.verificationCode)).catch(console.error);
+    connection.on('ReceiveStatusUpdate', async (update: { status: string; remarks: string }) => {
+      setResult(current => current ? { ...current, ...update } : current);
+      try {
+        const { data } = await api.get<CertificateData>(`/api/verify/${encodeURIComponent(resultCode)}`);
+        setResult(data);
+      } catch {
+        setResult(current => current ? { ...current, ...update } : current);
+      }
+    });
+    void connection.start().then(() => connection.invoke('SubscribeToCertificate', resultCode)).catch(console.error);
     return () => { connectionRef.current = null; void connection.stop(); };
-  }, [result]);
+  }, [resultCode]);
 
   return { code, setCode, result, error, loading, showScanner, setShowScanner, verify };
 }

@@ -16,6 +16,7 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
     public DbSet<Certificate> Certificates => Set<Certificate>();
     public DbSet<VerificationRequest> VerificationRequests => Set<VerificationRequest>();
     public DbSet<Grade> Grades => Set<Grade>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,7 +30,12 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(c => c.LegacyMaktoubNumber).HasMaxLength(128);
             entity.Property(c => c.Status).HasMaxLength(32).IsRequired();
             entity.Property(c => c.DigitalHash).HasMaxLength(64).IsRequired();
+            entity.Property(c => c.SigningKeyId).HasMaxLength(64).IsRequired();
+            entity.Property(c => c.RowVersion).IsRowVersion();
             entity.HasOne(c => c.Student).WithMany(s => s.Certificates).HasForeignKey(c => c.StudentId);
+            entity.HasOne(c => c.SupersedesCertificate).WithMany(c => c.Replacements)
+                .HasForeignKey(c => c.SupersedesCertificateId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(c => c.SupersedesCertificateId);
         });
         modelBuilder.Entity<Student>(entity =>
         {
@@ -57,6 +63,19 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(d => d.Name).HasMaxLength(200).IsRequired();
             entity.HasIndex(d => new { d.FacultyId, d.Name }).IsUnique();
             entity.HasOne(d => d.Faculty).WithMany(f => f.Departments).HasForeignKey(d => d.FacultyId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.Property(a => a.Action).HasMaxLength(100).IsRequired();
+            entity.Property(a => a.EntityType).HasMaxLength(100).IsRequired();
+            entity.Property(a => a.EntityId).HasMaxLength(128);
+            entity.Property(a => a.UserId).HasMaxLength(128);
+            entity.Property(a => a.UserName).HasMaxLength(256);
+            entity.Property(a => a.IpAddress).HasMaxLength(64);
+            entity.Property(a => a.UserAgent).HasMaxLength(512);
+            entity.Property(a => a.Details).HasMaxLength(4000);
+            entity.HasIndex(a => a.CreatedAt);
+            entity.HasIndex(a => new { a.EntityType, a.EntityId });
         });
     }
 }

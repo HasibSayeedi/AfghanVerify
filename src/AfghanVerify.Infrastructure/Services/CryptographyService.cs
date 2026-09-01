@@ -8,18 +8,30 @@ namespace AfghanVerify.Infrastructure.Services;
 
 public sealed class CryptographyService
 {
-    private readonly byte[] _signingKey;
+    private readonly IReadOnlyDictionary<string, byte[]> _keys;
+    public string ActiveKeyId { get; }
 
     public CryptographyService(IOptions<CryptographyOptions> options)
     {
-        try { _signingKey = Convert.FromBase64String(options.Value.SigningKey); }
-        catch (FormatException ex) { throw new InvalidOperationException("Cryptography:SigningKey must be a Base64 value.", ex); }
-        if (_signingKey.Length < 32) throw new InvalidOperationException("Cryptography:SigningKey must contain at least 256 bits.");
+        ActiveKeyId = options.Value.ActiveKeyId.Trim();
+        if (string.IsNullOrWhiteSpace(ActiveKeyId)) throw new InvalidOperationException("Cryptography:ActiveKeyId is required.");
+        var keys = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        keys[ActiveKeyId] = DecodeKey(options.Value.SigningKey, "Cryptography:SigningKey");
+        foreach (var (keyId, encodedKey) in options.Value.VerificationKeys)
+        {
+            var normalizedKeyId = keyId.Trim();
+            if (normalizedKeyId.Length == 0 || normalizedKeyId == ActiveKeyId) continue;
+            keys[normalizedKeyId] = DecodeKey(encodedKey, $"Cryptography:VerificationKeys:{normalizedKeyId}");
+        }
+        _keys = keys;
     }
 
     public string SignDocument(Student student, Certificate certificate)
     {
-        using var hmac = new HMACSHA256(_signingKey);
+        var keyId = string.IsNullOrWhiteSpace(certificate.SigningKeyId) ? ActiveKeyId : certificate.SigningKeyId;
+        if (!_keys.TryGetValue(keyId, out var signingKey))
+            throw new InvalidOperationException($"No cryptographic verification key is configured for key ID '{keyId}'.");
+        using var hmac = new HMACSHA256(signingKey);
         var payload = certificate.SignatureVersion >= 3
             ? CreateVersion3Payload(student, certificate)
             : CreateLegacyPayload(student, certificate);
@@ -29,7 +41,10 @@ public sealed class CryptographyService
     public bool VerifyDocument(Student student, Certificate certificate)
     {
         if (certificate.DigitalHash.Length != 64) return false;
-        var expected = Encoding.ASCII.GetBytes(SignDocument(student, certificate));
+        string expectedSignature;
+        try { expectedSignature = SignDocument(student, certificate); }
+        catch (InvalidOperationException) { return false; }
+        var expected = Encoding.ASCII.GetBytes(expectedSignature);
         var actual = Encoding.ASCII.GetBytes(certificate.DigitalHash.ToLowerInvariant());
         return CryptographicOperations.FixedTimeEquals(expected, actual);
     }
@@ -63,8 +78,10 @@ public sealed class CryptographyService
         }
 
         Append(payload, "AfghanVerify-HMAC-v3");
+        if (certificate.SignatureVersion >= 5) Append(payload, certificate.SigningKeyId.Trim());
         Append(payload, certificate.Id.ToString("N"));
         Append(payload, certificate.StudentId.ToString("N"));
+        if (certificate.SignatureVersion >= 4) Append(payload, certificate.SupersedesCertificateId?.ToString("N"));
         Append(payload, student.Id.ToString("N"));
         Append(payload, student.UniversityId.ToString("N"));
         Append(payload, student.FacultyId?.ToString("N"));
@@ -106,5 +123,14 @@ public sealed class CryptographyService
     {
         var utc = value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : DateTime.SpecifyKind(value, DateTimeKind.Utc);
         return utc.ToString("O", CultureInfo.InvariantCulture);
+    }
+
+    private static byte[] DecodeKey(string encodedKey, string settingName)
+    {
+        byte[] key;
+        try { key = Convert.FromBase64String(encodedKey); }
+        catch (FormatException ex) { throw new InvalidOperationException($"{settingName} must be a Base64 value.", ex); }
+        if (key.Length < 32) throw new InvalidOperationException($"{settingName} must contain at least 256 bits.");
+        return key;
     }
 }

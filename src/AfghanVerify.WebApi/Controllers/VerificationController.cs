@@ -1,8 +1,10 @@
+using AfghanVerify.Core.Entities;
 using AfghanVerify.Infrastructure.Data;
 using AfghanVerify.Infrastructure.Services;
 using AfghanVerify.WebApi.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace AfghanVerify.WebApi.Controllers;
@@ -17,6 +19,7 @@ public sealed class VerificationController : ControllerBase
     public VerificationController(ApplicationDbContext db, CryptographyService cryptography) { _db = db; _cryptography = cryptography; }
 
     [HttpGet("verify/{token}")]
+    [EnableRateLimiting("public-verification")]
     public async Task<IActionResult> Verify(string token, CancellationToken cancellationToken)
     {
         var code = NormalizeCode(token);
@@ -27,19 +30,42 @@ public sealed class VerificationController : ControllerBase
         var latestLog = await _db.VerificationRequests.AsNoTracking().Where(r => r.CertificateId == certificate.Id)
             .OrderByDescending(r => r.CreatedAt).FirstOrDefaultAsync(cancellationToken);
         var university = certificate.Student.University;
+        var signatureValid = _cryptography.VerifyDocument(certificate.Student, certificate);
+        var detailsAvailable = signatureValid && CertificateStatuses.IsPubliclyTrusted(certificate.Status);
         return Ok(new
         {
-            studentName = $"{certificate.Student.FirstName} {certificate.Student.LastName}".Trim(), certificate.Student.FatherName,
-            certificate.Student.TazkiraNumber, certificate.Student.ProfilePicture,
-            certificate.Student.Faculty, certificate.Student.Department, certificate.Student.GraduationYear, certificate.Gpa, certificate.DocumentType,
+            detailsAvailable,
+            studentName = detailsAvailable ? $"{certificate.Student.FirstName} {certificate.Student.LastName}".Trim() : null,
+            fatherName = detailsAvailable ? certificate.Student.FatherName : null,
+            tazkiraNumber = detailsAvailable ? MaskTazkira(certificate.Student.TazkiraNumber) : null,
+            profilePicture = detailsAvailable ? certificate.Student.ProfilePicture : null,
+            faculty = detailsAvailable ? certificate.Student.Faculty : null,
+            department = detailsAvailable ? certificate.Student.Department : null,
+            graduationYear = detailsAvailable ? certificate.Student.GraduationYear : (int?)null,
+            gpa = detailsAvailable ? certificate.Gpa : null,
+            documentType = detailsAvailable ? certificate.DocumentType : null,
             certificate.Status, securitySignature = certificate.DigitalHash, certificate.SignatureVersion,
-            signatureValid = _cryptography.VerifyDocument(certificate.Student, certificate),
-            issuedAt = certificate.IssueDate, certificate.VerificationCode, certificate.DiplomaFileUrl, certificate.TranscriptFileUrl,
-            certificate.IssuanceSystem, legacyMaktoubNumber = certificate.IssuanceSystem == "Legacy" ? certificate.LegacyMaktoubNumber : null,
+            certificate.SigningKeyId,
+            signatureValid,
+            issuedAt = certificate.IssueDate, certificate.VerificationCode,
+            diplomaFileUrl = detailsAvailable ? certificate.DiplomaFileUrl : null,
+            transcriptFileUrl = detailsAvailable ? certificate.TranscriptFileUrl : null,
+            issuanceSystem = detailsAvailable ? certificate.IssuanceSystem : null,
+            legacyMaktoubNumber = detailsAvailable && certificate.IssuanceSystem == "Legacy" ? certificate.LegacyMaktoubNumber : null,
             remarks = latestLog?.Remarks ?? "",
+            supersedesVerificationCode = certificate.SupersedesCertificateId.HasValue
+                ? await _db.Certificates.AsNoTracking().Where(c => c.Id == certificate.SupersedesCertificateId)
+                    .Select(c => c.VerificationCode).FirstOrDefaultAsync(cancellationToken)
+                : null,
+            replacementVerificationCode = certificate.Status == CertificateStatuses.Superseded
+                ? await _db.Certificates.AsNoTracking().Where(c => c.SupersedesCertificateId == certificate.Id && c.Status == CertificateStatuses.Verified)
+                    .OrderByDescending(c => c.IssueDate).Select(c => c.VerificationCode).FirstOrDefaultAsync(cancellationToken)
+                : null,
             university = university is null ? null : new UniversityDto(university.Id, university.NameEnglish, university.NameDari,
                 university.NamePashto, university.Code, university.LogoUrl, university.PrimaryColor, []),
-            transcript = certificate.Student.Grades.OrderBy(g => g.SemesterNumber).Select(g => new { g.SubjectName, g.SemesterNumber, g.Score, g.CreditHours })
+            transcript = detailsAvailable
+                ? certificate.Student.Grades.OrderBy(g => g.SemesterNumber).Select(g => new { g.SubjectName, g.SemesterNumber, g.Score, g.CreditHours })
+                : []
         });
     }
 
@@ -87,5 +113,12 @@ public sealed class VerificationController : ControllerBase
                 && ((parts[1].Length == 9 && parts[1].All(char.IsAsciiDigit))
                     || (parts[1].Length == 5 && parts[1].All(char.IsAsciiHexDigit))));
         return valid ? value : null;
+    }
+
+    private static string MaskTazkira(string value)
+    {
+        var digits = new string(value.Where(char.IsAsciiDigit).ToArray());
+        if (digits.Length <= 4) return new string('*', digits.Length);
+        return $"{new string('*', digits.Length - 4)}{digits[^4..]}";
     }
 }

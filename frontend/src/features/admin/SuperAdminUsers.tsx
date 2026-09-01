@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { UsersRound } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { api, getApiError, readSession } from '../../lib/api';
 import type { AuthSession, University } from '../../types';
@@ -193,10 +194,15 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
   return <section className="min-h-[calc(100vh-4.5rem)] bg-slate-100 px-4 py-6 sm:px-6 md:py-8 lg:px-8">
     <div className="mx-auto w-full max-w-7xl rounded-xl bg-white p-6 shadow-md md:p-8">
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[.24em] text-emerald-700">{isUniversityAdmin ? 'University administration' : 'Platform administration'}</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">User management</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{isUniversityAdmin ? 'Manage staff accounts securely within your assigned university.' : 'Provision Ministry administrators, university administrators, and registrars across the national platform.'}</p>
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-emerald-200 bg-emerald-50 text-[#02382c] shadow-sm" aria-hidden="true">
+            <UsersRound className="h-8 w-8" strokeWidth={1.8} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[.24em] text-emerald-700">{isUniversityAdmin ? 'University administration' : 'Platform administration'}</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">User management</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{isUniversityAdmin ? 'Manage staff accounts securely within your assigned university.' : 'Provision Ministry administrators, university administrators, and registrars across the national platform.'}</p>
+          </div>
         </div>
         <button type="button" onClick={openCreate} className="mr-0 inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-[#02382c] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-[#034d3d] sm:ml-auto sm:self-end">
           <UserIcon /> Add new user

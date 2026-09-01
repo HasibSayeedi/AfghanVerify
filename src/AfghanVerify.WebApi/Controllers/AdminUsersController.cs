@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AfghanVerify.Infrastructure.Data;
 using AfghanVerify.Infrastructure.Identity;
 using AfghanVerify.WebApi.Dtos;
+using AfghanVerify.WebApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -20,11 +21,13 @@ public sealed class AdminUsersController : ControllerBase
     private const string UniversityAdminRole = "UNIVERSITY_ADMIN";
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _db;
+    private readonly AuditService _audit;
 
-    public AdminUsersController(UserManager<ApplicationUser> userManager, ApplicationDbContext db)
+    public AdminUsersController(UserManager<ApplicationUser> userManager, ApplicationDbContext db, AuditService audit)
     {
         _userManager = userManager;
         _db = db;
+        _audit = audit;
     }
 
     [HttpGet]
@@ -106,6 +109,10 @@ public sealed class AdminUsersController : ControllerBase
             return IdentityValidationProblem(roleResult);
         }
 
+        _audit.Record("StaffAccountCreated", nameof(ApplicationUser), user.Id.ToString(),
+            new { user.Email, Role = identityRole, user.UniversityId });
+        await _db.SaveChangesAsync(cancellationToken);
+
         return Created($"/api/admin/users/{user.Id}", ToDto(user, identityRole,
             universityName is null || !universityId.HasValue ? [] : new Dictionary<Guid, string> { [universityId.Value] = universityName }));
     }
@@ -131,6 +138,10 @@ public sealed class AdminUsersController : ControllerBase
             var resetResult = await _userManager.ResetAccessFailedCountAsync(user);
             if (!resetResult.Succeeded) return IdentityValidationProblem(resetResult);
         }
+
+        _audit.Record(request.IsActive ? "StaffAccountActivated" : "StaffAccountDeactivated", nameof(ApplicationUser), user.Id.ToString(),
+            new { user.Email, IsActive = request.IsActive });
+        await _db.SaveChangesAsync(cancellationToken);
 
         var universities = user.UniversityId.HasValue
             ? await _db.Universities.AsNoTracking().Where(item => item.Id == user.UniversityId)
@@ -208,6 +219,9 @@ public sealed class AdminUsersController : ControllerBase
             var passwordResult = await _userManager.ResetPasswordAsync(user, resetToken, request.Password);
             if (!passwordResult.Succeeded) return IdentityValidationProblem(passwordResult);
         }
+        _audit.Record("StaffAccountUpdated", nameof(ApplicationUser), user.Id.ToString(),
+            new { user.Email, Role = requestedRole, user.UniversityId, PasswordChanged = !string.IsNullOrEmpty(request.Password) });
+        await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         return Ok(ToDto(user, requestedRole,
@@ -231,6 +245,8 @@ public sealed class AdminUsersController : ControllerBase
         user.LockoutEnd = DateTimeOffset.MaxValue;
         var updateResult = await _userManager.UpdateAsync(user);
         if (!updateResult.Succeeded) return IdentityValidationProblem(updateResult);
+        _audit.Record("StaffAccountSoftDeleted", nameof(ApplicationUser), user.Id.ToString(), new { user.Email });
+        await _db.SaveChangesAsync();
         return NoContent();
     }
 
