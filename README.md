@@ -1,271 +1,262 @@
-# Afghan Verify - National Credential Registry
+# Afghan Verify
 
-> A secure, national-scale platform for issuing, attesting, and verifying Afghan academic credentials.
+## National Academic Credential Registry
 
-Afghan Verify connects accredited universities, the Ministry of Higher Education, graduates, employers, and verification organizations through one trustworthy digital credential registry. The platform combines a clean-architecture ASP.NET Core backend with a responsive React interface, cryptographically authenticated records, tenant-aware administration, live review updates, QR verification, and high-quality credential exports.
+Afghan Verify is a secure digital platform for issuing, reviewing, and verifying academic credentials in Afghanistan. It connects accredited universities, Ministry reviewers, graduates, employers, and verification organizations through a single trusted registry.
 
-## Highlights
+The platform uses an ASP.NET Core 10 backend, React and TypeScript frontend, SQL Server persistence, ASP.NET Core Identity, JWT authentication, university-scoped authorization, HMAC-SHA256 credential signatures, QR verification, SignalR notifications, and high-resolution PDF export.
 
-- Secure university issuance and Ministry review workflow
-- Public verification through university-prefixed serial codes and QR scanning
-- HMAC-SHA256 authentication of credential and transcript data
-- Dynamic Diploma, Transcript, and Overview verification tabs
-- Multi-tier, university-scoped role-based access control
-- Excel and CSV transcript-course import
-- Responsive Dari, Pashto, Arabic-script, and Latin-script input support
-- High-resolution A4 PDF generation matching the visible credential layout
-- Real-time status notifications through SignalR
-- Soft-deleted staff accounts and self-service password management
-- SMTP-backed password recovery with expiring ASP.NET Core Identity tokens
-- University-issued record history with secure pending correction and cancellation
-- Audited credential lifecycle actions, including suspension, reinstatement, revocation, and replacement
+> Afghan Verify is a production-oriented software project designed around national academic credential workflows. Deployment as an official government service requires the appropriate authorization, infrastructure, policies, and operational controls.
 
-## Security architecture
+---
 
-Afghan Verify applies defense in depth across authentication, authorization, data validation, cryptography, and persistence.
+## Core capabilities
 
-### Identity and authentication
+### University workspace
 
-- ASP.NET Core Identity stores salted password hashes and enforces password complexity.
-- JWT bearer tokens include role, user identity, and university-scope claims.
-- Account lockout limits repeated failed login attempts.
-- Authenticated staff can securely change their own passwords by confirming the current password.
-- Password recovery uses expiring, single-purpose ASP.NET Core Identity reset tokens delivered through configured institutional SMTP.
-- Recovery requests return a generic response to reduce account-enumeration risk and are protected by rate limiting.
-- Administrators can securely reset staff passwords without storing plaintext credentials.
+- Issue diploma, transcript, or combined academic credentials.
+- Select an accredited university, faculty, and department.
+- Validate Afghan student names in Latin and Arabic-derived scripts.
+- Enforce 13-digit Afghanistan e-Tazkira validation.
+- Validate GPA, graduation year, document URLs, semester, score, and credit hours.
+- Import transcript courses from Excel or CSV.
+- Download XLSX and CSV transcript templates.
+- Generate a unique university-prefixed credential code such as `KU-491029481`.
+- Display the verification code and QR code immediately after issuance.
+- Review institution-scoped issued-record history.
+- Open complete credential details from an interactive record card.
+- Correct a credential while it is awaiting Ministry review.
+- Cancel a pending credential with a required official reason.
+- Issue a linked replacement for an already verified credential.
 
-### Multi-tier RBAC
+### Ministry workspace
 
-| Platform role | Scope | Primary capabilities |
-| --- | --- | --- |
-| `SUPER_ADMIN` | National | Manage Ministry, University Admin, and Registrar accounts across all institutions |
-| `UNIVERSITY_ADMIN` | Assigned university | Manage sub-staff belonging only to the administrator's own institution |
-| `Ministry` | Ministry review | Review, approve, and reject submitted credentials |
-| `University` | Assigned university | Issue credentials and submit academic records for review |
+- Review incoming credentials in a focused pending queue.
+- Approve or reject credentials with official decision notes.
+- Require a rejection reason before a credential can be rejected.
+- Move processed records automatically into audit history.
+- Search history by student, university, or archive code.
+- View approved and rejected record details in a read-only panel.
+- Filter operational statistics by week, month, or year.
+- Suspend, reinstate, or revoke an approved credential with an official reason.
+- Receive and publish status changes through SignalR.
 
-University tenancy is enforced by the signed `university_id` JWT claim on the API, not merely by hidden frontend controls. University administrators cannot query or manipulate accounts from another institution, and their own account is excluded from the sub-staff table to prevent accidental self-lockout.
+### Public verification
 
-### Credential integrity
+- Verify a credential without signing in.
+- Search by archive code or scan a QR code.
+- Display trusted, pending, rejected, suspended, revoked, superseded, and cancelled states.
+- Validate the stored HMAC-SHA256 signature.
+- Mask sensitive Tazkira information in public responses.
+- View responsive Overview, Diploma, and Transcript tabs.
+- Open the uploaded diploma or transcript associated with the active tab.
+- Download the visible credential as a high-resolution PDF.
+- Export diplomas in A4 landscape and transcripts in A4 portrait orientation.
 
-- Each issued credential is authenticated with keyed HMAC-SHA256.
-- The signing payload covers student identity, university, faculty and department IDs, document metadata, issue time, URLs, GPA, verification code, and every transcript course.
-- Versioned canonical payloads prevent ambiguous field concatenation.
-- Verification uses fixed-time comparison to reduce timing side channels.
-- Signing keys are loaded from configuration or a deployment secret store.
-- Cryptographically random nine-digit serials are prefixed by university code, such as `KU-491029481`.
-- A unique database index and serializable issuance transaction protect against verification-code collisions.
-- Correcting a pending record regenerates its HMAC signature; the previous signature cannot validate modified student or transcript data.
-- Approved credentials are immutable. Corrections are issued as linked replacements so the original audit chain remains intact.
+### User and account management
 
-### Validation and privacy controls
+- National `SUPER_ADMIN` account management.
+- Institution-scoped `UNIVERSITY_ADMIN` account management.
+- Ministry reviewer and University Registrar accounts.
+- Create, edit, activate, deactivate, and soft-delete staff accounts.
+- Prevent university administrators from managing another institution.
+- Prevent administrators from accidentally managing their own active account.
+- Update staff passwords securely through ASP.NET Core Identity.
+- Allow every authenticated user to update their own password.
+- Recover forgotten passwords through expiring email reset links.
 
-- Afghan e-Tazkira numbers must contain exactly 13 numeric digits.
-- Student names accept Latin and Arabic-derived Dari/Pashto scripts while rejecting numbers and unsafe punctuation.
-- GPA, graduation year, semester, score, credit-hour, URL, document-type, and institutional relationships are validated server-side.
-- University identity claims must match the university included in issuance requests.
-- Invalid or inactive universities, faculties, and departments are rejected instead of silently falling back.
-- Staff deletion is implemented as soft deletion and permanent lockout to preserve referential integrity and audit history.
-- Universities may update or cancel only their own records and only while the credential is in `PendingMinistry` state.
-- Cancellation reasons, credential corrections, Ministry decisions, lifecycle actions, and staff administration events are retained in audit logs.
+---
+
+## Architecture
+
+```text
+React 19 + TypeScript + Tailwind CSS
+                 |
+                 | HTTPS / JWT / SignalR
+                 v
+         ASP.NET Core 10 Web API
+                 |
+       +---------+----------+
+       |                    |
+ASP.NET Core Identity   Application services
+       |                    |
+       +---------+----------+
+                 |
+        Entity Framework Core 10
+                 |
+              SQL Server
+```
+
+The backend is separated into the following projects:
+
+- `AfghanVerify.Core`: domain entities and credential lifecycle constants.
+- `AfghanVerify.Infrastructure`: Entity Framework Core, Identity, cryptography, migrations, and SignalR hub.
+- `AfghanVerify.WebApi`: controllers, DTOs, authentication, authorization, rate limiting, audit services, and application configuration.
+- `AfghanVerify.Infrastructure.Tests`: cryptographic integrity tests.
+
+---
 
 ## Credential lifecycle
 
 ```text
 University Registrar
-       |
-       | Issues student record, transcript, and file links
-       v
+        |
+        | Issue signed credential
+        v
 Pending Ministry Review
-       |
-       +-- Correct --> Re-sign updated pending data --> Ministry queue
-       |
-       +-- Cancel  --> Cancelled + retained audit history
-       |
-       +-- Approve --> Verified public credential
-       |
-       +-- Reject  --> Returned with review remarks
-       |
-       +-- Status changes --> SignalR notification
-
-Verified Credential
-       |
-       +-- Suspend / Reinstate / Revoke
-       |
-       +-- Corrected replacement --> Original becomes Superseded
+        |
+        +-- Correct --> Re-sign data --> Return to review queue
+        |
+        +-- Cancel  --> Cancelled + retained audit history
+        |
+        +-- Reject  --> Rejected with official notes
+        |
+        +-- Approve --> Verified public credential
+                              |
+                              +-- Suspend
+                              +-- Reinstate
+                              +-- Revoke
+                              +-- Replace --> Original becomes Superseded
 ```
 
-1. A university registrar selects the institution, faculty, and department and enters the student record.
-2. Transcript courses can be entered manually or imported from Excel/CSV.
-3. The API validates the university scope and academic relationships.
-4. A unique university-prefixed verification code is generated.
-5. The canonical credential payload is signed with HMAC-SHA256.
-6. The record enters the Ministry review queue.
-7. Status changes are broadcast through SignalR.
-8. Approved credentials become available through public code or QR verification.
-9. Before approval, the issuing university can correct or cancel its own pending submission.
-10. After approval, corrections use a linked replacement credential instead of mutating the signed original.
+Approved credentials are immutable. Corrections after approval create a new linked credential instead of silently changing signed historical data.
 
-## Verification experience
+---
 
-The public interface is mobile-first and does not require an account. A verifier can enter a credential code or scan its QR code and inspect:
+## Security model
 
-- Verification and Ministry approval status
-- Cryptographic signature validation status
-- Student and institutional academic details
-- Diploma view with official branding and seals
-- Transcript view grouped into responsive semester cards
-- Verifiable uploaded diploma or transcript attachment for the active tab
-- Print-quality credential PDF for the active Diploma or Transcript view
+### Authentication
 
-PDF export captures the same visible DOM credential instead of a separate template. Diplomas use A4 landscape orientation, transcripts use A4 portrait orientation, and high-resolution canvas rendering preserves typography, logos, borders, and colors.
+- ASP.NET Core Identity stores salted password hashes.
+- JWT bearer tokens identify users, roles, and university scope.
+- Account lockout limits repeated failed sign-in attempts.
+- Private API routes require valid JWT authentication.
+- Password-reset tokens are generated by ASP.NET Core Identity and expire automatically.
+- Password-recovery requests use a generic response to reduce account enumeration.
+- Recovery endpoints are rate limited.
 
-## Administration features
+### Role-based authorization
 
-### University portal
+| Role | Scope | Capabilities |
+| --- | --- | --- |
+| `SUPER_ADMIN` | National | Manage staff across all institutions and inspect audit logs |
+| `UNIVERSITY_ADMIN` | Assigned university | Manage registrar accounts belonging to the same university |
+| `Ministry` | Ministry | Review credentials and manage verified credential lifecycle |
+| `University` | Assigned university | Issue, correct, cancel, and replace university credentials |
 
-- Institution-scoped credential issuance
-- Separate Faculty and Department selection
-- Strict student and academic validation
-- Dynamic medical-faculty semester limits
-- Excel/CSV bulk transcript import with a sample template
-- Immediate verification-code and QR display after successful issuance
-- Diploma and transcript file-link configuration
-- Automatic scroll-to-success feedback
-- Institution-scoped `Issued records` workspace with live search
-- Clickable credential detail modal with student, document, link, and transcript information
-- Secure correction of pending records while preserving the verification code
-- Automatic HMAC regeneration after every accepted pending correction
-- Audited cancellation of pending submissions with a required official reason
-- Read-only finalized records and linked replacement workflow for approved credentials
+University access is enforced by the signed `university_id` JWT claim on the server. Frontend filtering is not treated as a security boundary.
 
-### Ministry portal
+### Cryptographic integrity
 
-- Central review queue
-- Approve and reject workflows with remarks
-- Safe Cancel action in the review dialog
-- Live status updates through SignalR
-- Automatic return to the top of the review list after processing
-- Pending Queue and processed History views
-- Live history search by student, university, or archive code
-- Week, month, and year statistics for pending, approved, and rejected records
-- Read-only processed-record details and rejection reasons
-- Controlled suspension, reinstatement, and revocation with official reasons
+- Credentials are signed with keyed HMAC-SHA256.
+- Signing keys are loaded from configuration or deployment secrets.
+- Versioned signing-key identifiers support cryptographic key rotation.
+- Canonical length-prefixed payloads prevent ambiguous field concatenation.
+- The signature covers student identity, institution, faculty, department, academic metadata, file URLs, issue time, verification code, replacement relationship, and transcript courses.
+- Verification uses fixed-time signature comparison.
+- Correcting pending data always generates a new signature.
+- Modifying signed data without re-signing causes verification to fail.
 
-### User management
+### Data integrity and auditability
 
-- National and university-scoped administrative views
-- Create, edit, activate, deactivate, and soft-delete staff accounts
-- Institution assignment and role management
-- Tenant-locked university selection for University Admins
-- Secure administrative password reset
-- Professional confirmation and success dialogs
+- Verification codes use cryptographically secure random generation.
+- University prefixes contain two to four normalized characters.
+- Credential codes have a unique database index.
+- Serializable issuance transactions and collision retries protect code allocation.
+- Optimistic concurrency protects Ministry decisions and university corrections.
+- Staff deletion is implemented as soft deletion.
+- Credential corrections, cancellations, Ministry decisions, lifecycle actions, and administrative changes are written to audit logs.
 
-### Account settings
-
-- Read-only identity summary
-- Human-readable role and assigned institution
-- Current-password ownership verification
-- Independent password visibility controls
-- Self-service password updates for every authenticated role
-
-### Password recovery
-
-- Compact, responsive forgot-password and reset-password views
-- Institutional-email validation with custom inline errors
-- SMTP delivery through configuration-managed credentials
-- Generic success responses that do not reveal whether an account exists
-- Expiring reset links backed by ASP.NET Core Identity Data Protection
-- Persistent Data Protection keys supported in container deployments
+---
 
 ## Technology stack
 
-| Layer | Technologies |
+| Area | Technology |
 | --- | --- |
-| Frontend | React 19, TypeScript 6, Vite 8, Tailwind CSS 4 |
-| API | ASP.NET Core 10 Web API, JWT Bearer Authentication, SignalR |
-| Architecture | Core, Infrastructure, WebApi, and test projects |
-| Identity | ASP.NET Core Identity with role and tenant claims |
-| Persistence | Entity Framework Core 10, SQL Server, code-first migrations |
-| Cryptography | HMAC-SHA256, cryptographically secure random codes, fixed-time verification |
-| Documents | jsPDF, html2canvas, ExcelJS, QRCode |
-| Testing | xUnit and frontend TypeScript/ESLint production checks |
+| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4 |
+| Backend | ASP.NET Core 10 Web API |
+| Authentication | ASP.NET Core Identity and JWT Bearer |
+| Database | SQL Server and Entity Framework Core 10 |
+| Cryptography | HMAC-SHA256 and secure random number generation |
+| Real-time updates | ASP.NET Core SignalR |
+| PDF generation | html2pdf.js, html2canvas, and jsPDF |
+| Transcript import | ExcelJS and CSV parsing |
+| QR codes | qrcode.react and QR scanner support |
+| Testing | xUnit, TypeScript compiler, ESLint, and Vite production build |
+| Containers | Docker Compose, .NET runtime, Node.js build, and Nginx |
+
+---
 
 ## Repository structure
 
 ```text
 AfghanVerify/
-|-- frontend/                         React, TypeScript, Tailwind, Vite
-|   |-- public/                       Static public assets
+|-- frontend/
+|   |-- public/
 |   `-- src/
-|       |-- assets/                   Credential and institutional logos
-|       |-- features/account/         Personal profile and password settings
-|       |-- features/admin/           Multi-tier staff management
-|       |-- features/ministry-portal/ Ministry review workflow
-|       |-- features/university-portal/ Credential issuance and issued-record management
-|       `-- features/verification/    Public verification and PDF views
+|       |-- assets/
+|       |-- features/
+|       |   |-- account/
+|       |   |-- admin/
+|       |   |-- ministry-portal/
+|       |   |-- university-portal/
+|       |   `-- verification/
+|       |-- App.tsx
+|       |-- Login.tsx
+|       |-- ForgotPassword.tsx
+|       `-- ResetPassword.tsx
 |-- src/
-|   |-- AfghanVerify.Core/            Domain entities
-|   |-- AfghanVerify.Infrastructure/  EF Core, Identity, cryptography, migrations
-|   `-- AfghanVerify.WebApi/          Controllers, DTOs, JWT, SignalR
+|   |-- AfghanVerify.Core/
+|   |-- AfghanVerify.Infrastructure/
+|   `-- AfghanVerify.WebApi/
 |-- tests/
 |   `-- AfghanVerify.Infrastructure.Tests/
+|-- .env.example
+|-- docker-compose.yml
 |-- AfghanVerify.slnx
 `-- README.md
 ```
 
+---
+
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/)
-- SQL Server or SQL Server Express
 - Node.js 20 or newer
 - npm
+- SQL Server 2022, SQL Server Express, or a compatible SQL Server instance
+- Git
 
-## Docker Compose
-
-The containerized deployment runs three services on an isolated Docker network:
-
-- `frontend`: a multi-stage Node.js build served by Nginx
-- `backend`: the ASP.NET Core Web API on the .NET 10 runtime
-- `database`: SQL Server 2022 Express with a persistent named volume
-
-Create the local Compose environment file and replace every placeholder with a strong, unique secret:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Then build and start the complete platform:
-
-```powershell
-docker compose up --build -d
-docker compose ps
-```
-
-Open `http://localhost:8080`. Nginx serves the React application and securely proxies `/api` and `/notificationHub` to the backend. EF Core applies pending migrations when the API starts. To inspect service logs or stop the platform:
-
-```powershell
-docker compose logs -f backend
-docker compose down
-```
-
-Database data remains in the `sqlserver-data` volume after `docker compose down`. Only use `docker compose down --volumes` when intentionally deleting the local container database.
+---
 
 ## Local development
 
-### 1. Clone and install
+### 1. Clone the repository
 
 ```powershell
-git clone <your-repository-url>
+git clone https://github.com/HasibSayeedi/AfghanVerify.git
 Set-Location AfghanVerify
+```
+
+### 2. Restore dependencies
+
+```powershell
 dotnet restore AfghanVerify.slnx
+
 Set-Location frontend
 npm install
 Set-Location ..
 ```
 
-### 2. Configure local secrets
+### 3. Configure local secrets
 
-Create `src/AfghanVerify.WebApi/appsettings.Local.json`. This file is intentionally ignored by Git.
+Create this ignored file:
+
+```text
+src/AfghanVerify.WebApi/appsettings.Local.json
+```
+
+Example configuration:
 
 ```json
 {
@@ -273,16 +264,17 @@ Create `src/AfghanVerify.WebApi/appsettings.Local.json`. This file is intentiona
     "DefaultConnection": "Server=.\\SQLEXPRESS;Database=AfghanVerifyDb;Trusted_Connection=True;MultipleActiveResultSets=true;Encrypt=False;TrustServerCertificate=True"
   },
   "Jwt": {
-    "Key": "replace-with-a-cryptographically-random-secret-of-at-least-32-characters"
+    "Key": "replace-with-a-strong-random-secret-containing-at-least-32-characters"
   },
   "Cryptography": {
+    "ActiveKeyId": "primary",
     "SigningKey": "replace-with-a-base64-encoded-random-key-containing-at-least-32-bytes"
   },
   "Email": {
     "Host": "smtp.example.gov.af",
     "Port": 587,
     "Username": "no-reply@example.gov.af",
-    "Password": "replace-with-the-smtp-account-password",
+    "Password": "replace-with-an-smtp-credential",
     "FromAddress": "no-reply@example.gov.af",
     "FromName": "Afghan Verify",
     "EnableSsl": true
@@ -294,26 +286,38 @@ Create `src/AfghanVerify.WebApi/appsettings.Local.json`. This file is intentiona
 }
 ```
 
-Environment variables can be used instead:
+Never commit real JWT keys, HMAC keys, SMTP passwords, database credentials, bootstrap passwords, `.env` files, or `appsettings.Local.json`.
+
+### 4. Generate local cryptographic secrets
+
+Generate separate values for JWT and HMAC signing:
 
 ```powershell
-$env:Jwt__Key = "your-random-jwt-key"
+$jwtBytes = [Security.Cryptography.RandomNumberGenerator]::GetBytes(64)
+$hmacBytes = [Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
+
+[Convert]::ToBase64String($jwtBytes)
+[Convert]::ToBase64String($hmacBytes)
+```
+
+Use the first output for `Jwt:Key` and the second output for `Cryptography:SigningKey`.
+
+Environment-variable equivalents use double underscores:
+
+```powershell
+$env:Jwt__Key = "your-jwt-secret"
 $env:Cryptography__SigningKey = "your-base64-hmac-key"
 $env:ConnectionStrings__DefaultConnection = "your-sql-server-connection-string"
 $env:Email__Host = "smtp.example.gov.af"
 $env:Email__Port = "587"
 $env:Email__Username = "no-reply@example.gov.af"
-$env:Email__Password = "your-smtp-password"
+$env:Email__Password = "your-smtp-credential"
 $env:Email__FromAddress = "no-reply@example.gov.af"
 $env:Email__EnableSsl = "true"
 $env:PasswordRecovery__FrontendBaseUrl = "http://localhost:5173"
 ```
 
-Never commit real JWT keys, HMAC keys, bootstrap passwords, database credentials, `.env` files, certificates, or `appsettings.Local.json`.
-
-### 3. Apply the database schema
-
-The Web API applies pending EF Core migrations during startup. To apply them explicitly:
+### 5. Apply Entity Framework Core migrations
 
 ```powershell
 dotnet ef database update `
@@ -321,22 +325,28 @@ dotnet ef database update `
   --startup-project src/AfghanVerify.WebApi
 ```
 
-### 4. Start the API
+The API also applies pending migrations during startup.
+
+### 6. Run the backend
 
 ```powershell
 dotnet run --project src/AfghanVerify.WebApi --launch-profile https
 ```
 
-Development endpoints are configured by `launchSettings.json`. The HTTP API proxy target used by Vite is `http://localhost:5081`.
+### 7. Run the frontend
 
-### 5. Start the frontend
+Open another terminal:
 
 ```powershell
 Set-Location frontend
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+Open:
+
+```text
+http://localhost:5173
+```
 
 For a separately hosted API, create `frontend/.env.local`:
 
@@ -345,59 +355,158 @@ VITE_API_BASE_URL=https://localhost:7267
 VITE_PUBLIC_VERIFY_BASE_URL=http://localhost:5173
 ```
 
-## Validation commands
+---
+
+## Password recovery and SMTP
+
+Password recovery requires a valid SMTP account. Configure only the SMTP hostname in `Email:Host`; do not include `https://`, `smtp://`, or another URL scheme.
+
+Example:
+
+```json
+{
+  "Email": {
+    "Host": "smtp.gmail.com",
+    "Port": 587,
+    "EnableSsl": true
+  }
+}
+```
+
+For providers that support application-specific credentials, use a provider-issued app password rather than the normal account password. Restart the Web API after changing local email configuration.
+
+---
+
+## Docker Compose
+
+The Compose deployment contains:
+
+- `frontend`: multi-stage Vite build served by Nginx.
+- `backend`: ASP.NET Core 10 Web API.
+- `database`: SQL Server with persistent storage.
+
+Create a local environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Replace every placeholder with a unique secret, then run:
+
+```powershell
+docker compose up --build -d
+docker compose ps
+```
+
+Open:
+
+```text
+http://localhost:8080
+```
+
+Useful commands:
+
+```powershell
+docker compose logs -f backend
+docker compose restart backend
+docker compose down
+```
+
+Database data remains in the named volume after `docker compose down`. Running `docker compose down --volumes` intentionally deletes the container database.
+
+---
+
+## Validation and tests
+
+Run backend checks:
 
 ```powershell
 dotnet build AfghanVerify.slnx --configuration Release
 dotnet test AfghanVerify.slnx --configuration Release
+```
 
+Run frontend checks:
+
+```powershell
 Set-Location frontend
 npm run lint
 npm run build
 ```
 
-## Core API routes
+The cryptography tests verify that unchanged records validate, modified records fail verification, SQL Server date round-trips remain stable, replacement relationships are signed, signing-key IDs are covered, and corrected records become trusted only after re-signing.
+
+---
+
+## Primary API routes
 
 | Method | Route | Access |
 | --- | --- | --- |
 | `POST` | `/api/auth/login` | Public |
-| `POST` | `/api/auth/forgot-password` | Public, rate limited |
-| `POST` | `/api/auth/reset-password` | Public, token required |
+| `POST` | `/api/auth/forgot-password` | Public and rate limited |
+| `POST` | `/api/auth/reset-password` | Public with reset token |
 | `PUT` | `/api/account/password` | Authenticated staff |
 | `GET` | `/api/universities` | Public |
 | `GET` | `/api/verify/{code}` | Public |
 | `POST` | `/api/certificates/issue` | University Registrar |
 | `GET` | `/api/certificates/issued` | University Registrar, institution scoped |
-| `PUT` | `/api/certificates/{code}/pending` | University Registrar, pending records only |
-| `POST` | `/api/certificates/{code}/cancel` | University Registrar, pending records only |
+| `PUT` | `/api/certificates/{code}/pending` | University Registrar, pending only |
+| `POST` | `/api/certificates/{code}/cancel` | University Registrar, pending only |
 | `GET` | `/api/ministry/queue` | Ministry |
 | `GET` | `/api/ministry/history` | Ministry |
+| `GET` | `/api/ministry/history-page` | Ministry |
+| `GET` | `/api/ministry/statistics` | Ministry |
 | `POST` | `/api/ministry/review` | Ministry |
 | `POST` | `/api/ministry/lifecycle` | Ministry |
 | `GET/POST/PUT/PATCH` | `/api/admin/users` | Super Admin or scoped University Admin |
 | `GET` | `/api/admin/audit-logs` | Super Admin |
 | SignalR | `/notificationHub` | Application clients |
 
+---
+
 ## Production deployment checklist
 
-- Supply JWT, HMAC, database, and bootstrap secrets through a managed secret store.
-- Remove bootstrap-user configuration after initial account provisioning.
+- Store JWT, HMAC, SMTP, database, and bootstrap secrets in a managed secret store.
+- Use independent high-entropy values for JWT and HMAC signing.
+- Persist ASP.NET Core Data Protection keys across restarts.
+- Rotate cryptographic keys under a documented key-management procedure.
 - Terminate TLS at a trusted reverse proxy and enforce HTTPS.
-- Restrict `Cors:AllowedOrigins` to deployed frontend origins.
-- Use a least-privilege SQL Server login and automated encrypted backups.
-- Store uploaded diploma and transcript files in durable private object storage with controlled access URLs.
-- Run EF Core migrations as a deliberate deployment step.
-- Centralize structured logs without recording tokens, passwords, Tazkira numbers, or signing payloads.
-- Configure CSP, HSTS, rate limiting, health checks, monitoring, and alerting at the hosting layer.
-- Rotate JWT and HMAC keys according to an established key-management procedure.
-- Run release builds and automated tests before deployment.
-- Persist ASP.NET Core Data Protection keys so password-reset tokens remain valid across container restarts.
-- Configure a trusted institutional SMTP provider and use provider-issued credentials rather than personal account passwords.
+- Restrict CORS to deployed frontend origins.
+- Apply a restrictive Content Security Policy.
+- Use a least-privilege SQL Server account.
+- Encrypt database backups and test restoration procedures.
+- Store diploma and transcript files in durable private object storage.
+- Use controlled or expiring attachment URLs where required.
+- Configure institutional SMTP with monitored delivery and bounce handling.
+- Remove or disable bootstrap accounts after initial provisioning.
+- Centralize structured logs without recording passwords, tokens, full Tazkira numbers, or signing payloads.
+- Monitor authentication failures, lifecycle actions, audit events, database health, and email delivery.
+- Apply migrations through a controlled deployment process.
+- Run backend tests, frontend lint, and production builds before release.
 
-## Responsible handling
+---
 
-Academic credentials and identity information are sensitive. Deployers are responsible for access governance, retention policies, legal compliance, incident response, key rotation, audit review, and secure file storage appropriate to their environment.
+## Updating the GitHub repository
+
+After validating local changes:
+
+```powershell
+git add .
+git status
+git commit -m "feat: update Afghan Verify platform"
+git pull --rebase origin main
+git push origin main
+```
+
+`appsettings.Local.json` and `.env` files are intentionally excluded through `.gitignore` and must never be force-added.
+
+---
+
+## Responsible data handling
+
+Academic credentials and national identity information are sensitive. Production operators are responsible for access governance, data-retention rules, legal compliance, incident response, backup protection, key rotation, audit review, and secure document storage appropriate to their environment.
+
+---
 
 ## License
 
-No open-source license is currently included. Add an appropriate license before distributing or accepting external contributions.
+No open-source license is currently included. Add an appropriate license before public redistribution or accepting external contributions.
