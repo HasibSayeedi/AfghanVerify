@@ -1,4 +1,4 @@
-# Afghan Verify 🇦🇫
+# Afghan Verify
 
 ## National Academic Credential Registry
 
