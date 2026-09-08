@@ -85,7 +85,7 @@ export default function IssuedRecords({ onEdit }: { onEdit: (record: IssuedCrede
     finally { setCancelling(false); }
   };
 
-  return <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+  return <section className="av-card overflow-hidden">
     <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
       <div><div className="flex items-center gap-3"><FileCheck2 className="h-6 w-6 text-emerald-700" aria-hidden="true"/><h2 className="text-xl font-black text-slate-900">Issued records</h2></div><p className="mt-1 text-sm text-slate-500">Correct or cancel records while they are still awaiting Ministry review.</p></div>
       <button type="button" onClick={() => void load()} disabled={loading} className="min-h-11 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 disabled:opacity-50">Refresh</button>

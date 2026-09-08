@@ -63,7 +63,7 @@ export default function Login({ onLogin }: { onLogin: (session: AuthSession) => 
 
   return <section className="relative isolate min-h-[calc(100vh-4.5rem)] overflow-hidden px-4 py-16">
     <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,#d1fae5,transparent_38%),radial-gradient(circle_at_bottom_right,#e2e8f0,transparent_40%)]" />
-    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-3xl border border-white bg-white shadow-2xl shadow-emerald-950/10 lg:grid-cols-[1.05fr_.95fr]">
+    <div className="av-card mx-auto grid max-w-5xl overflow-hidden lg:grid-cols-[1.05fr_.95fr]">
       <div className="hidden bg-emerald-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div><p className="text-xs font-bold uppercase tracking-[.28em] text-emerald-300">Authorized personnel</p><h1 className="mt-6 text-4xl font-black leading-tight">Protecting the integrity of every academic achievement.</h1><p className="mt-5 max-w-md text-emerald-100/75">Secure access for accredited universities and Ministry of Higher Education reviewers.</p></div>
         <div className="flex items-center gap-3 text-sm text-emerald-100"><span className="h-2 w-2 rounded-full bg-emerald-400" />Identity protected by JWT and role-based access</div>

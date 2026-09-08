@@ -7,6 +7,49 @@ body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, a { transition: color .2s ease, background-color .2s ease, border-color .2s ease, transform .2s ease, opacity .2s ease; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
+
+/* AfghanVerify card system -------------------------------------------------
+   These composable primitives unify visual language without prescribing a
+   single layout. Feature components remain responsible for their own grids,
+   alignment, status colours and content density. */
+.av-card {
+  background: #fff;
+  border: 1px solid rgb(226 232 240 / .9);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / .04), 0 8px 24px rgb(15 23 42 / .035);
+}
+.av-card-pad { padding: 1.25rem; }
+.av-card-muted {
+  background: rgb(248 250 252 / .8);
+  border: 1px solid rgb(226 232 240 / .9);
+  border-radius: 1rem;
+}
+.av-card-interactive {
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.av-card-interactive:focus-within {
+  border-color: rgb(110 231 183 / .9);
+  box-shadow: 0 0 0 3px rgb(209 250 229 / .75), 0 8px 24px rgb(6 78 59 / .06);
+}
+@media (hover: hover) {
+  .av-card-interactive:hover {
+    border-color: rgb(167 243 208 / .9);
+    box-shadow: 0 2px 4px rgb(15 23 42 / .04), 0 12px 30px rgb(6 78 59 / .07);
+    transform: translateY(-1px);
+  }
+}
+.av-card-title {
+  color: #0f172a;
+  font-weight: 700;
+  letter-spacing: -.015em;
+}
+.av-card-copy {
+  color: #475569;
+  line-height: 1.625;
+}
+.av-card-accent { border-top: 4px solid #f59e0b; }
+.av-card-danger { border-color: #fecaca; }
+@media (min-width: 640px) { .av-card-pad { padding: 1.5rem; } }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes dropdown { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes scan { 0%,100% { transform: translateY(-70px); opacity:.35; } 50% { transform: translateY(70px); opacity:1; } }

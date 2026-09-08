@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { UsersRound } from 'lucide-react';
+import { UserCheck, UsersRound, UserX } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { api, getApiError, readSession } from '../../lib/api';
 import type { AuthSession, University } from '../../types';
@@ -80,7 +80,7 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
       try {
         const [usersResponse, universitiesResponse] = await Promise.all([
           api.get<StaffUser[]>('/api/admin/users'),
-          api.get<University[]>('/api/universities'),
+          api.get<University[]>(isUniversityAdmin ? '/api/universities' : '/api/admin/universities/options'),
         ]);
         if (!mounted) return;
         setUsers(usersResponse.data);
@@ -93,7 +93,14 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
     };
     void loadData();
     return () => { mounted = false; };
-  }, []);
+  }, [isUniversityAdmin]);
+
+  useEffect(() => {
+    if (!isModalOpen && !pendingDeleteUser) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [isModalOpen, pendingDeleteUser]);
 
   const closeModal = () => {
     if (saving) return;
@@ -192,7 +199,7 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
   };
 
   return <section className="min-h-[calc(100vh-4.5rem)] bg-slate-100 px-4 py-6 sm:px-6 md:py-8 lg:px-8">
-    <div className="mx-auto w-full max-w-7xl rounded-xl bg-white p-6 shadow-md md:p-8">
+    <div className="av-card mx-auto w-full max-w-7xl p-6 md:p-8">
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div className="flex min-w-0 items-center gap-4">
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-emerald-200 bg-emerald-50 text-[#02382c] shadow-sm" aria-hidden="true">
@@ -210,15 +217,15 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Staff accounts</p><p className="mt-2 text-3xl font-black text-slate-900">{visibleUsers.length}</p></div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Active</p><p className="mt-2 text-3xl font-black text-emerald-700">{activeCount}</p></div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Inactive</p><p className="mt-2 text-3xl font-black text-slate-500">{visibleUsers.length - activeCount}</p></div>
+        <article className="av-card-muted flex min-h-32 items-start justify-between gap-4 p-5 sm:p-6"><div className="min-w-0 self-center"><p className="text-xs font-bold uppercase leading-5 tracking-wider text-slate-500">Staff accounts</p><p className="mt-2 text-3xl font-black tabular-nums text-slate-950">{visibleUsers.length}</p></div><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-700"><UsersRound className="h-6 w-6" strokeWidth={1.8} aria-hidden="true"/></span></article>
+        <article className="av-card-muted flex min-h-32 items-start justify-between gap-4 p-5 sm:p-6"><div className="min-w-0 self-center"><p className="text-xs font-bold uppercase leading-5 tracking-wider text-slate-500">Active staff</p><p className="mt-2 text-3xl font-black tabular-nums text-emerald-700">{activeCount}</p></div><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><UserCheck className="h-6 w-6" strokeWidth={1.8} aria-hidden="true"/></span></article>
+        <article className="av-card-muted flex min-h-32 items-start justify-between gap-4 p-5 sm:p-6"><div className="min-w-0 self-center"><p className="text-xs font-bold uppercase leading-5 tracking-wider text-slate-500">Inactive staff</p><p className="mt-2 text-3xl font-black tabular-nums text-slate-700">{visibleUsers.length - activeCount}</p></div><span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-slate-200/70 text-slate-600"><UserX className="h-6 w-6" strokeWidth={1.8} aria-hidden="true"/></span></article>
       </div>
 
       {error && <p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
       {success && <p role="status" aria-live="polite" className="mt-6 mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800">{success}</p>}
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="av-card mt-6 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[960px] text-left">
             <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-[.12em] text-slate-500">
@@ -253,7 +260,7 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
       </div>
     </div>
 
-    {isModalOpen && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/55 px-4 py-8 backdrop-blur-sm" onMouseDown={event => { if (event.target === event.currentTarget) closeModal(); }}>
+    {isModalOpen && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/55 px-4 py-8 backdrop-blur-sm">
       <div role="dialog" aria-modal="true" aria-labelledby="new-user-title" className="max-h-[85vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-3xl border border-white/60 border-t-4 border-t-amber-500 bg-white px-6 pt-6 pb-12 shadow-2xl sm:px-8 sm:pt-8 sm:pb-12">
         <div className="mx-auto w-full max-w-xl">
           <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#02614d]">Staff access</p><h2 id="new-user-title" className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{editingUser ? 'Edit user' : 'Add new user'}</h2><p className="mt-1 text-sm text-slate-500">{editingUser ? 'Update this staff member’s identity and institutional access.' : 'Create an account with the minimum institutional access required.'}</p></div><button type="button" onClick={closeModal} aria-label="Close dialog" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 text-xl text-slate-500 hover:bg-slate-200">&times;</button></div>
@@ -270,7 +277,7 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
           <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Role<select required disabled={isUniversityAdmin} value={form.role} onChange={event => setForm(current => ({ ...current, role: event.target.value as StaffRole, universityId: '' }))} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}>
             {isUniversityAdmin ? <option value={form.role}>{form.role === 'UNIVERSITY_ADMIN' ? 'University administrator' : 'University registrar'}</option> : <><option value="MINISTRY_ADMIN">Ministry administrator</option><option value="UNIVERSITY_ADMIN">University administrator</option><option value="UNIVERSITY_REGISTRAR">University registrar</option></>}
           </select>{isUniversityAdmin && !editingUser && <span className="mt-2 block text-xs font-medium normal-case tracking-normal text-slate-400">University administrators can provision registrar accounts.</span>}</label>
-          {form.role !== 'MINISTRY_ADMIN' && <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Assigned university<select required disabled={isUniversityAdmin} value={form.universityId} onChange={event => setForm(current => ({ ...current, universityId: event.target.value }))} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}><option value="" disabled selected hidden>Select a registered university</option>{availableUniversities.map(university => <option key={university.id} value={university.id}>{university.nameEnglish} ({university.code})</option>)}</select>{isUniversityAdmin && <span className="mt-2 block text-xs font-medium normal-case tracking-normal text-slate-400">Locked to your assigned institution.</span>}</label>}
+          {form.role !== 'MINISTRY_ADMIN' && <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Assigned university<select required disabled={isUniversityAdmin} value={form.universityId} onChange={event => setForm(current => ({ ...current, universityId: event.target.value }))} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}><option value="" disabled hidden>Select a registered university</option>{availableUniversities.map(university => <option key={university.id} value={university.id}>{university.nameEnglish} ({university.code})</option>)}</select>{isUniversityAdmin && <span className="mt-2 block text-xs font-medium normal-case tracking-normal text-slate-400">Locked to your assigned institution.</span>}</label>}
           <div className="mt-6 flex flex-col-reverse items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:justify-end"><button type="button" onClick={closeModal} disabled={saving} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancel</button><button type="submit" disabled={saving || showPasswordLengthError || showPasswordMismatchError || (form.role !== 'MINISTRY_ADMIN' && !form.universityId)} className="rounded-xl bg-[#02382c] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/10 hover:bg-[#034d3d] disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Saving account...' : editingUser ? 'Save changes' : 'Create staff account'}</button></div>
         </form>
       </div>

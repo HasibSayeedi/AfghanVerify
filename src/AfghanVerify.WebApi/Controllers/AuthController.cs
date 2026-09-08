@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
+using AfghanVerify.Core.Entities;
 using AfghanVerify.Infrastructure.Identity;
 using AfghanVerify.Infrastructure.Data;
 using AfghanVerify.WebApi.Configuration;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 
 namespace AfghanVerify.WebApi.Controllers;
 
@@ -41,7 +43,7 @@ public sealed class AuthController : ControllerBase
     [AllowAnonymous]
     [EnableRateLimiting("login")]
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginRequestDto request)
+    public async Task<IActionResult> Login(LoginRequestDto request, CancellationToken cancellationToken)
     {
         var user = await _userManager.FindByNameAsync(request.Username.Trim());
         if (user is null || user.IsDeleted) return Unauthorized(new { message = "Invalid email or password." });
@@ -50,11 +52,24 @@ public sealed class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid email or password." });
 
         var roles = await _userManager.GetRolesAsync(user);
+        var role = roles.FirstOrDefault();
+        University? university = null;
+        if (user.UniversityId.HasValue)
+        {
+            university = await _db.Universities.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == user.UniversityId.Value && item.IsActive, cancellationToken);
+        }
+        if (role is "University" or "UNIVERSITY_ADMIN" && university is null)
+        {
+            _logger.LogWarning("Login refused for university-scoped user {UserId}: assigned university is missing or inactive.", user.Id);
+            return Unauthorized(new { message = "This account is not assigned to an active university. Contact your administrator." });
+        }
+
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()), new(JwtRegisteredClaimNames.UniqueName, user.UserName ?? ""),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")), new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.UserName ?? "")
+            new(ClaimTypes.Name, user.UserName ?? ""), new("security_stamp", user.SecurityStamp ?? string.Empty)
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
         if (user.UniversityId.HasValue) claims.Add(new Claim("university_id", user.UniversityId.Value.ToString()));
@@ -62,9 +77,9 @@ public sealed class AuthController : ControllerBase
         var token = new JwtSecurityToken(_jwt.Issuer, _jwt.Audience, claims, expires: expiresAt,
             signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key)), SecurityAlgorithms.HmacSha256));
         _audit.Record("LoginSucceeded", nameof(ApplicationUser), user.Id.ToString(), new { Roles = roles });
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token), expiresAt, userId = user.Id, username = user.UserName, user.DisplayName,
-            role = roles.FirstOrDefault(), universityId = user.UniversityId });
+            role, universityId = user.UniversityId, universityName = university?.NameEnglish, universityCode = university?.Code });
     }
 
     [AllowAnonymous]

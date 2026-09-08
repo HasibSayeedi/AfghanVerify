@@ -46,13 +46,23 @@ services:
       PasswordRecovery__FrontendBaseUrl: ${PUBLIC_FRONTEND_URL:-http://localhost:8080}
       PasswordRecovery__TokenLifetimeMinutes: ${PASSWORD_RESET_TOKEN_MINUTES:-30}
       DataProtection__KeysPath: /var/afghanverify-keys
+      FileStorage__UniversityLogosPath: /var/afghanverify-university-logos
+      Database__InitializeOnStartup: "true"
+      ReverseProxy__TrustForwardedHeaders: "true"
     volumes:
       - data-protection-keys:/var/afghanverify-keys
+      - university-logos:/var/afghanverify-university-logos
     depends_on:
       database:
         condition: service_healthy
-    ports:
-      - "${API_PORT:-5081}:8080"
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:8080/health/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
     networks:
       - afghanverify-network
 
@@ -62,7 +72,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     networks:
@@ -71,6 +82,7 @@ services:
 volumes:
   sqlserver-data:
   data-protection-keys:
+  university-logos:
 
 networks:
   afghanverify-network:

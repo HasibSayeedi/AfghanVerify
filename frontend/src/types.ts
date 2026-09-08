@@ -76,4 +76,6 @@ export interface AuthSession {
   displayName: string;
   role: 'Ministry' | 'University' | 'SUPER_ADMIN' | 'UNIVERSITY_ADMIN';
   universityId?: string;
+  universityName?: string;
+  universityCode?: string;
 }

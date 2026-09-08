@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { BadgeCheck, Database, KeyRound } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DocumentHeader from './components/DocumentHeader';
 import StudentProfile from './components/StudentProfile';
@@ -115,8 +116,12 @@ export default function VerifyDocument() {
       </div>
     </section>
     <section className="print-shell relative z-10 mx-auto -mt-12 min-h-40 max-w-5xl px-4 pb-20 sm:px-6">
-      {error && <div role="alert" className="animate-rise rounded-2xl border border-red-200 bg-white p-6 text-center shadow-xl"><p className="font-bold text-red-700">Verification unsuccessful</p><p className="mt-1 text-sm text-slate-500">{error}</p></div>}
-      {!result && !error && <div className="grid gap-4 sm:grid-cols-3">{[['01','Enter the archive code'],['02','We check the registry'],['03','View the verified record']].map(([n,t])=><div key={n} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><span className="text-xs font-black text-emerald-700">{n}</span><p className="mt-3 font-bold text-slate-800">{t}</p></div>)}</div>}
+      {error && <div role="alert" className="av-card av-card-danger animate-rise p-6 text-center"><p className="font-bold text-red-700">Verification unsuccessful</p><p className="av-card-copy mt-1 text-sm">{error}</p></div>}
+      {!result && !error && <div className="grid auto-rows-fr gap-4 sm:grid-cols-3">{[
+        [KeyRound, '01', 'Enter the archive code', 'Use the unique code printed on the credential.'],
+        [Database, '02', 'We check the registry', 'The record is securely matched against the national registry.'],
+        [BadgeCheck, '03', 'View the verified record', 'Review its official status and published academic details.'],
+      ].map(([Icon,n,title,description])=><article key={String(n)} className="av-card av-card-pad flex h-full min-h-64 flex-col items-center text-center"><span className="text-xs font-black tracking-widest text-amber-600">STEP {String(n)}</span><span className="mt-5 grid h-16 w-16 place-items-center rounded-2xl bg-emerald-50 text-emerald-800"><Icon className="h-8 w-8" aria-hidden="true"/></span><h2 className="av-card-title mt-5 text-lg">{String(title)}</h2><p className="av-card-copy mt-3 text-sm">{String(description)}</p></article>)}</div>}
       {result && <article ref={resultRef} className="print-document scroll-mt-6 animate-rise overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10"><div className="print-document-body p-3 sm:p-9"><DocumentHeader data={result} />
         {!result.signatureValid && result.signatureVersion >= 2 && <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">Security warning: this record’s signature does not match its stored data.</div>}
         {!result.signatureValid && result.signatureVersion < 2 && <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">This historical record predates the current HMAC signature version. Its ministry status and registry audit trail remain available.</div>}
