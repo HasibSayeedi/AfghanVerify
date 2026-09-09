@@ -3,6 +3,7 @@ import { UserCheck, UsersRound, UserX } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { api, getApiError, readSession } from '../../lib/api';
 import type { AuthSession, University } from '../../types';
+import RecordsPagination from '../../components/RecordsPagination';
 
 type StaffRole = 'MINISTRY_ADMIN' | 'UNIVERSITY_ADMIN' | 'UNIVERSITY_REGISTRAR';
 
@@ -57,6 +58,7 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
   const [changingUserId, setChangingUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [pendingDeleteUser, setPendingDeleteUser] = useState<StaffUser | null>(null);
+  const [page, setPage] = useState(1);
 
   const passwordTooShort = Boolean(editingUser && form.password.length > 0 && form.password.length < 8);
   const passwordsDoNotMatch = Boolean(editingUser && (form.password || form.confirmPassword) && form.password !== form.confirmPassword);
@@ -70,6 +72,9 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
     );
   }, [session.userId, session.username, users]);
   const activeCount = useMemo(() => visibleUsers.filter(user => user.isActive).length, [visibleUsers]);
+  const totalPages = Math.max(1, Math.ceil(visibleUsers.length / 15));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedUsers = visibleUsers.slice((currentPage - 1) * 15, currentPage * 15);
   const availableUniversities = isUniversityAdmin
     ? universities.filter(university => university.id === session.universityId)
     : universities;
@@ -208,7 +213,7 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[.24em] text-emerald-700">{isUniversityAdmin ? 'University administration' : 'Platform administration'}</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">User management</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{isUniversityAdmin ? 'Manage staff accounts securely within your assigned university.' : 'Provision Ministry administrators, university administrators, and registrars across the national platform.'}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{isUniversityAdmin ? 'Manage staff accounts securely within your assigned university.' : 'Provision Ministry reviewers, university administrators, and registrars across the national platform.'}</p>
           </div>
         </div>
         <button type="button" onClick={openCreate} className="mr-0 inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-[#02382c] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-[#034d3d] sm:ml-auto sm:self-end">
@@ -226,22 +231,23 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
       {success && <p role="status" aria-live="polite" className="mt-6 mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800">{success}</p>}
 
       <div className="av-card mt-6 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] text-left">
+        <div className="hidden overflow-hidden xl:block">
+          <table className="w-full table-fixed text-left">
+            <colgroup><col className="w-[16%]"/><col className="w-[22%]"/><col className="w-[18%]"/><col className="w-[18%]"/><col className="w-[10%]"/><col className="w-[16%]"/></colgroup>
             <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-[.12em] text-slate-500">
-              <tr><th className="px-6 py-4">Name</th><th className="px-6 py-4">Email</th><th className="min-w-[160px] whitespace-nowrap px-6 py-4">Role</th><th className="px-6 py-4">Assigned university</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Actions</th></tr>
+              <tr><th className="px-3 py-4 xl:px-4">Name</th><th className="px-3 py-4 xl:px-4">Email</th><th className="whitespace-nowrap px-3 py-4 xl:px-4">Role</th><th className="px-3 py-4 xl:px-4">Assigned university</th><th className="px-3 py-4 xl:px-4">Status</th><th className="px-3 py-4 text-right xl:px-4">Actions</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loading && <tr><td colSpan={6} className="px-6 py-14 text-center text-slate-500">Loading staff accounts...</td></tr>}
               {!loading && visibleUsers.length === 0 && <tr><td colSpan={6} className="px-6 py-14 text-center text-slate-500">No Ministry or university staff accounts have been created.</td></tr>}
-              {!loading && visibleUsers.map(user => <tr key={user.id} className="transition hover:bg-slate-50/70">
-                <td className="px-6 py-4 font-bold text-slate-900">{user.name}</td>
-                <td className="px-6 py-4 text-slate-600">{user.email}</td>
-                <td className="min-w-[160px] whitespace-nowrap px-6 py-4"><span className="inline-flex whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">{user.role === 'MINISTRY_ADMIN' ? 'Ministry' : user.role === 'UNIVERSITY_ADMIN' ? 'University Admin' : 'University Registrar'}</span></td>
-                <td className="px-6 py-4 text-slate-600">{user.assignedUniversity || <span className="text-slate-400">Not applicable</span>}</td>
-                <td className="px-6 py-4"><span className={`inline-flex items-center gap-2 text-xs font-bold ${user.isActive ? 'text-emerald-700' : 'text-slate-500'}`}><span className={`h-2 w-2 rounded-full ${user.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />{user.isActive ? 'Active' : 'Inactive'}</span></td>
-                <td className="px-6 py-4 align-middle">
-                  <div className="flex items-center justify-end gap-4">
+              {!loading && paginatedUsers.map(user => <tr key={user.id} className="transition hover:bg-slate-50/70">
+                <td className="px-3 py-4 font-bold text-slate-900 xl:px-4"><span className="block truncate" title={user.name}>{user.name}</span></td>
+                <td className="px-3 py-4 text-slate-600 xl:px-4"><span className="block truncate" title={user.email}>{user.email}</span></td>
+                <td className="whitespace-nowrap px-3 py-4 xl:px-4"><span className="inline-flex max-w-full truncate whitespace-nowrap rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-800">{user.role === 'MINISTRY_ADMIN' ? 'Ministry Reviewer' : user.role === 'UNIVERSITY_ADMIN' ? 'University Admin' : 'University Registrar'}</span></td>
+                <td className="px-3 py-4 text-slate-600 xl:px-4"><span className="block truncate" title={user.assignedUniversity}>{user.assignedUniversity || <span className="text-slate-400">Not applicable</span>}</span></td>
+                <td className="px-3 py-4 xl:px-4"><span className={`inline-flex items-center gap-1.5 text-xs font-bold ${user.isActive ? 'text-emerald-700' : 'text-slate-500'}`}><span className={`h-2 w-2 shrink-0 rounded-full ${user.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />{user.isActive ? 'Active' : 'Inactive'}</span></td>
+                <td className="px-3 py-4 align-middle xl:px-4">
+                  <div className="flex items-center justify-end gap-2 xl:gap-3">
                     <button type="button" onClick={() => openEdit(user)} disabled={saving || deletingUserId === user.id} aria-label={`Edit ${user.name}`} title="Edit user" className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition hover:bg-emerald-50 hover:text-[#02614d] focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-40">
                       <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
                     </button>
@@ -257,6 +263,16 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
             </tbody>
           </table>
         </div>
+        <div className="divide-y divide-slate-100 xl:hidden">
+          {loading && <p className="px-5 py-12 text-center text-sm text-slate-500">Loading staff accounts...</p>}
+          {!loading && visibleUsers.length === 0 && <p className="px-5 py-12 text-center text-sm text-slate-500">No Ministry or university staff accounts have been created.</p>}
+          {!loading && paginatedUsers.map(user => <article key={user.id} className="p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-bold text-slate-900">{user.name}</h3><p className="mt-1 truncate text-sm text-slate-500">{user.email}</p></div><span className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-bold ${user.isActive ? 'text-emerald-700' : 'text-slate-500'}`}><span className={`h-2 w-2 rounded-full ${user.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}/>{user.isActive ? 'Active' : 'Inactive'}</span></div>
+            <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2"><div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Role</dt><dd className="mt-1 font-semibold text-slate-700">{user.role === 'MINISTRY_ADMIN' ? 'Ministry Reviewer' : user.role === 'UNIVERSITY_ADMIN' ? 'University Admin' : 'University Registrar'}</dd></div><div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assigned university</dt><dd className="mt-1 font-semibold text-slate-700">{user.assignedUniversity || 'Not applicable'}</dd></div></dl>
+            <div className="mt-4 flex items-center justify-end gap-3 border-t border-slate-100 pt-3"><button type="button" onClick={() => openEdit(user)} disabled={saving || deletingUserId === user.id} aria-label={`Edit ${user.name}`} className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><button type="button" onClick={() => openDeleteModal(user)} disabled={deletingUserId === user.id || changingUserId === user.id} aria-label={`Delete ${user.name}`} className="grid h-10 w-10 place-items-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"><svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6"/><path d="M10 11v5m4-5v5"/></svg></button><button type="button" role="switch" aria-checked={user.isActive} aria-label={`${user.isActive ? 'Deactivate' : 'Activate'} ${user.name}`} disabled={changingUserId === user.id} onClick={() => void toggleStatus(user)} className={`relative inline-flex h-7 w-12 items-center rounded-full border disabled:opacity-50 ${user.isActive ? 'border-[#02382c] bg-[#02382c]' : 'border-slate-300 bg-slate-200'}`}><span className={`h-5 w-5 rounded-full border border-slate-200 bg-white shadow-sm transition-transform ${user.isActive ? 'translate-x-6' : 'translate-x-1'}`}/></button></div>
+          </article>)}
+        </div>
+        {!loading&&<RecordsPagination page={currentPage} totalPages={totalPages} onChange={nextPage => setPage(nextPage)}/>} 
       </div>
     </div>
 
@@ -275,7 +291,7 @@ function SuperAdminUsersDashboard({ session }: { session: AuthSession }) {
             <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Confirm new password<input type={showPassword ? 'text' : 'password'} maxLength={128} autoComplete="new-password" placeholder="Repeat new password" value={form.confirmPassword} onChange={event => setForm(current => ({ ...current, confirmPassword: event.target.value }))} onBlur={() => setPasswordTouched(current => ({ ...current, confirmPassword: true }))} className={`${inputClass} [&::-ms-clear]:hidden [&::-ms-reveal]:hidden`} />{showPasswordMismatchError && <span role="alert" className="mt-2 block text-xs font-semibold normal-case tracking-normal text-red-600">Passwords do not match.</span>}</label>
           </div>}
           <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Role<select required disabled={isUniversityAdmin} value={form.role} onChange={event => setForm(current => ({ ...current, role: event.target.value as StaffRole, universityId: '' }))} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}>
-            {isUniversityAdmin ? <option value={form.role}>{form.role === 'UNIVERSITY_ADMIN' ? 'University administrator' : 'University registrar'}</option> : <><option value="MINISTRY_ADMIN">Ministry administrator</option><option value="UNIVERSITY_ADMIN">University administrator</option><option value="UNIVERSITY_REGISTRAR">University registrar</option></>}
+            {isUniversityAdmin ? <option value={form.role}>{form.role === 'UNIVERSITY_ADMIN' ? 'University administrator' : 'University registrar'}</option> : <><option value="MINISTRY_ADMIN">Ministry Reviewer</option><option value="UNIVERSITY_ADMIN">University administrator</option><option value="UNIVERSITY_REGISTRAR">University registrar</option></>}
           </select>{isUniversityAdmin && !editingUser && <span className="mt-2 block text-xs font-medium normal-case tracking-normal text-slate-400">University administrators can provision registrar accounts.</span>}</label>
           {form.role !== 'MINISTRY_ADMIN' && <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Assigned university<select required disabled={isUniversityAdmin} value={form.universityId} onChange={event => setForm(current => ({ ...current, universityId: event.target.value }))} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}><option value="" disabled hidden>Select a registered university</option>{availableUniversities.map(university => <option key={university.id} value={university.id}>{university.nameEnglish} ({university.code})</option>)}</select>{isUniversityAdmin && <span className="mt-2 block text-xs font-medium normal-case tracking-normal text-slate-400">Locked to your assigned institution.</span>}</label>}
           <div className="mt-6 flex flex-col-reverse items-stretch gap-3 pt-2 sm:flex-row sm:items-center sm:justify-end"><button type="button" onClick={closeModal} disabled={saving} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancel</button><button type="submit" disabled={saving || showPasswordLengthError || showPasswordMismatchError || (form.role !== 'MINISTRY_ADMIN' && !form.universityId)} className="rounded-xl bg-[#02382c] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/10 hover:bg-[#034d3d] disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Saving account...' : editingUser ? 'Save changes' : 'Create staff account'}</button></div>

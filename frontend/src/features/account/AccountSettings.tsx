@@ -31,7 +31,7 @@ function PasswordField({ label, value, visible, onChange, onBlur, onToggle, auto
 }
 
 const roleLabels: Record<AuthSession['role'], string> = {
-  Ministry: 'Ministry Officer',
+  Ministry: 'Ministry Reviewer',
   University: 'University Registrar',
   SUPER_ADMIN: 'Super Administrator',
   UNIVERSITY_ADMIN: 'University Administrator',

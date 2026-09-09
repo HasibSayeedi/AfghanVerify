@@ -76,7 +76,8 @@ public sealed class AuthController : ControllerBase
         var expiresAt = DateTime.UtcNow.AddMinutes(_jwt.ExpirationMinutes);
         var token = new JwtSecurityToken(_jwt.Issuer, _jwt.Audience, claims, expires: expiresAt,
             signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key)), SecurityAlgorithms.HmacSha256));
-        _audit.Record("LoginSucceeded", nameof(ApplicationUser), user.Id.ToString(), new { Roles = roles });
+        _audit.Record("LoginSucceeded", nameof(ApplicationUser), user.Id.ToString(), new { Roles = roles },
+            actorUserId: user.Id.ToString(), actorUserName: user.UserName, actorRole: string.Join(", ", roles));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token), expiresAt, userId = user.Id, username = user.UserName, user.DisplayName,
             role, universityId = user.UniversityId, universityName = university?.NameEnglish, universityCode = university?.Code });
@@ -103,6 +104,8 @@ public sealed class AuthController : ControllerBase
         try
         {
             await _emailSender.SendAsync(email, user.DisplayName, resetUrl, lifetime, cancellationToken);
+            // The request is anonymous: keep the actor as System/unknown rather than
+            // incorrectly attributing the request to the account owner.
             _audit.Record("PasswordRecoveryRequested", nameof(ApplicationUser), user.Id.ToString());
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -140,7 +143,9 @@ public sealed class AuthController : ControllerBase
 
         await _userManager.SetLockoutEndDateAsync(user, null);
         await _userManager.ResetAccessFailedCountAsync(user);
-        _audit.Record("PasswordRecoveryCompleted", nameof(ApplicationUser), user.Id.ToString());
+        var roles = await _userManager.GetRolesAsync(user);
+        _audit.Record("PasswordRecoveryCompleted", nameof(ApplicationUser), user.Id.ToString(),
+            actorUserId: user.Id.ToString(), actorUserName: user.UserName, actorRole: string.Join(", ", roles));
         await _db.SaveChangesAsync(cancellationToken);
         return Ok(new { message = "Your password has been reset successfully. You can now sign in." });
     }

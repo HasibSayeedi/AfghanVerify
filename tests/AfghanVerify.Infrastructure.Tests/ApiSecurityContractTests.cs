@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using System.Security.Claims;
 using AfghanVerify.Core.Entities;
 using AfghanVerify.Infrastructure.Data;
 using AfghanVerify.WebApi.Controllers;
 using AfghanVerify.WebApi.Dtos;
+using AfghanVerify.WebApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -17,12 +19,52 @@ public sealed class ApiSecurityContractTests
     [InlineData(typeof(CertificatesController), "University")]
     [InlineData(typeof(AdminUsersController), "SUPER_ADMIN,UNIVERSITY_ADMIN")]
     [InlineData(typeof(AdminUniversitiesController), "SUPER_ADMIN")]
+    [InlineData(typeof(AuditLogsController), "SUPER_ADMIN")]
     public void PrivilegedControllers_RequireExpectedRoles(Type controllerType, string roles)
     {
         var authorize = controllerType.GetCustomAttribute<AuthorizeAttribute>();
 
         Assert.NotNull(authorize);
         Assert.Equal(roles, authorize.Roles);
+    }
+
+    [Fact]
+    public void AuditLogController_IsReadOnly()
+    {
+        var actionMethods = typeof(AuditLogsController).GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+
+        Assert.NotEmpty(actionMethods);
+        Assert.All(actionMethods, method => Assert.NotNull(method.GetCustomAttribute<Microsoft.AspNetCore.Mvc.HttpGetAttribute>()));
+    }
+
+    [Fact]
+    public void AuditService_StagesActorRoleOutcomeAndBoundedRequestMetadata()
+    {
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=AuditModelInspection;Trusted_Connection=True")
+            .Options;
+        using var db = new ApplicationDbContext(options);
+        var identity = new ClaimsIdentity([
+            new Claim(ClaimTypes.NameIdentifier, "actor-123"),
+            new Claim(ClaimTypes.Name, "admin@afghanverify.local"),
+            new Claim(ClaimTypes.Role, "SUPER_ADMIN")
+        ], "test");
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(identity)
+        };
+        httpContext.Request.Headers.UserAgent = new string('x', 600);
+        var service = new AuditService(db, new Microsoft.AspNetCore.Http.HttpContextAccessor { HttpContext = httpContext });
+
+        service.Record("UniversityUpdated", nameof(University), Guid.NewGuid().ToString(), new { Code = "KU" });
+
+        var entry = Assert.Single(db.AuditLogs.Local);
+        Assert.Equal("actor-123", entry.UserId);
+        Assert.Equal("admin@afghanverify.local", entry.UserName);
+        Assert.Equal("SUPER_ADMIN", entry.ActorRole);
+        Assert.Equal("Succeeded", entry.Outcome);
+        Assert.Equal(512, entry.UserAgent.Length);
+        Assert.Contains("KU", entry.Details);
     }
 
     [Fact]

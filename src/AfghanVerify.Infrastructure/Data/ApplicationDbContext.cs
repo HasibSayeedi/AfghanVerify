@@ -97,6 +97,8 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(a => a.EntityId).HasMaxLength(128);
             entity.Property(a => a.UserId).HasMaxLength(128);
             entity.Property(a => a.UserName).HasMaxLength(256);
+            entity.Property(a => a.ActorRole).HasMaxLength(256);
+            entity.Property(a => a.Outcome).HasMaxLength(32).IsRequired();
             entity.Property(a => a.IpAddress).HasMaxLength(64);
             entity.Property(a => a.UserAgent).HasMaxLength(512);
             entity.Property(a => a.Details).HasMaxLength(4000);

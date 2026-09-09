@@ -8,7 +8,7 @@ export function HomePage() {
     <section className="relative overflow-hidden bg-[#022f27] py-20 text-white sm:py-28">
       <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" aria-hidden="true"/>
       <div className="absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-amber-400/10 blur-3xl" aria-hidden="true"/>
-      <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-[1.1fr_.9fr] lg:px-8">
+      <div className="av-page-container relative grid items-center gap-14 lg:grid-cols-[1.1fr_.9fr]">
         <div className="max-w-3xl">
           <p className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[.2em] text-emerald-200"><ShieldCheck className="h-4 w-4"/>National credential registry</p>
           <h1 className="mt-7 text-4xl font-black tracking-tight sm:text-6xl">Academic credentials you can trust.</h1>
@@ -20,7 +20,7 @@ export function HomePage() {
         </div>
       </div>
     </section>
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8"><div className="grid auto-rows-fr gap-6 md:grid-cols-3">{[
+    <section className="av-page-container py-16"><div className="grid auto-rows-fr gap-6 md:grid-cols-3">{[
       [Building2, 'Institutional issuance', 'Authorized university staff submit student and academic information within their assigned university scope.'],
       [FileCheck2, 'Ministry review', 'Submitted credentials enter a controlled review workflow before their public status is finalized.'],
       [ShieldCheck, 'Secure verification', 'A unique verification code or QR code opens the public credential record and its integrity status.'],
@@ -66,6 +66,26 @@ export function FaqPage() {
   </PublicPageHeader>;
 }
 
+export function PrivacyPolicyPage() {
+  return <PublicPageHeader eyebrow="Legal information" title="Privacy Policy" description="How AfghanVerify handles information within the credential verification workflow.">
+    <article className="av-card av-card-pad mx-auto mt-10 max-w-3xl space-y-6">
+      <section><h2 className="av-card-title text-lg">Public verification</h2><p className="av-card-copy mt-2 text-sm">Public verification displays only the credential information intentionally exposed by the verification service. Sensitive identity values, including the complete Tazkira number, are not shown publicly.</p></section>
+      <section><h2 className="av-card-title text-lg">Authorized access</h2><p className="av-card-copy mt-2 text-sm">University and Ministry records are available only to authenticated staff according to their assigned role and institutional scope.</p></section>
+      <section><h2 className="av-card-title text-lg">Security records</h2><p className="av-card-copy mt-2 text-sm">Security and audit information may be retained to protect credential integrity, investigate administrative actions, and maintain accountability.</p></section>
+    </article>
+  </PublicPageHeader>;
+}
+
+export function TermsOfUsePage() {
+  return <PublicPageHeader eyebrow="Legal information" title="Terms of Use" description="Conditions for using the AfghanVerify public verification service.">
+    <article className="av-card av-card-pad mx-auto mt-10 max-w-3xl space-y-6">
+      <section><h2 className="av-card-title text-lg">Verification results</h2><p className="av-card-copy mt-2 text-sm">Use the complete credential code or official QR link when checking an academic record. A result reflects the current status stored by the platform at the time of verification.</p></section>
+      <section><h2 className="av-card-title text-lg">Acceptable use</h2><p className="av-card-copy mt-2 text-sm">Do not attempt to bypass access controls, alter credential information, disrupt the service, or use information obtained through the platform for unlawful purposes.</p></section>
+      <section><h2 className="av-card-title text-lg">Corrections</h2><p className="av-card-copy mt-2 text-sm">Questions about academic information or requests for correction should be directed to the university that issued the credential.</p></section>
+    </article>
+  </PublicPageHeader>;
+}
+
 function PublicPageHeader({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: React.ReactNode }) {
-  return <section className="min-h-[calc(100vh-9rem)] bg-slate-50 px-4 py-14 sm:px-6 sm:py-20 lg:px-8"><div className="mx-auto max-w-7xl"><header className="mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[.22em] text-emerald-700">{eyebrow}</p><h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">{title}</h1><p className="mt-5 text-base leading-8 text-slate-600 sm:text-lg">{description}</p></header>{children}</div></section>;
+  return <section className="min-h-[calc(100vh-9rem)] bg-slate-50 py-14 sm:py-20"><div className="av-page-container"><header className="mx-auto max-w-3xl text-center"><p className="text-xs font-bold uppercase tracking-[.22em] text-emerald-700">{eyebrow}</p><h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">{title}</h1><p className="mt-5 text-base leading-8 text-slate-600 sm:text-lg">{description}</p></header>{children}</div></section>;
 }
