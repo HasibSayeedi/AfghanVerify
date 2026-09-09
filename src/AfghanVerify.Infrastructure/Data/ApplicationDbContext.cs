@@ -42,7 +42,7 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
             entity.Property(s => s.TazkiraNumber).HasMaxLength(64).IsRequired();
             entity.Property(s => s.Faculty).HasMaxLength(200).IsRequired();
             entity.Property(s => s.Department).HasMaxLength(200).IsRequired();
-            entity.HasOne(s => s.University).WithMany().HasForeignKey(s => s.UniversityId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(s => s.University).WithMany(u => u.Students).HasForeignKey(s => s.UniversityId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(s => s.FacultyRecord).WithMany().HasForeignKey(s => s.FacultyId).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(s => s.DepartmentRecord).WithMany().HasForeignKey(s => s.DepartmentId).OnDelete(DeleteBehavior.NoAction);
         });
@@ -50,7 +50,33 @@ public sealed class ApplicationDbContext : IdentityDbContext<ApplicationUser, Id
         modelBuilder.Entity<University>(entity =>
         {
             entity.HasIndex(u => u.Code).IsUnique();
+            // Legacy imports can contain repeated display names. The API normalizes and
+            // rejects new duplicates; this lookup index must remain non-unique so migrations
+            // never discard or rename historical institutions.
+            entity.HasIndex(u => u.NameEnglish);
             entity.Property(u => u.Code).HasMaxLength(16).IsRequired();
+            entity.Property(u => u.NameEnglish).HasMaxLength(200).IsRequired();
+            entity.Property(u => u.NameDari).HasMaxLength(200);
+            entity.Property(u => u.NamePashto).HasMaxLength(200);
+            entity.Property(u => u.ShortName).HasMaxLength(80).IsRequired();
+            entity.Property(u => u.UniversityType).HasMaxLength(16).IsRequired();
+            entity.Property(u => u.Province).HasMaxLength(100).IsRequired();
+            entity.Property(u => u.City).HasMaxLength(100).IsRequired();
+            entity.Property(u => u.CampusBranch).HasMaxLength(150);
+            entity.Property(u => u.OfficialAddress).HasMaxLength(500).IsRequired();
+            entity.Property(u => u.OfficialEmail).HasMaxLength(256).IsRequired();
+            entity.Property(u => u.OfficialPhoneNumber).HasMaxLength(32).IsRequired();
+            entity.Property(u => u.Website).HasMaxLength(2048);
+            entity.Property(u => u.Location).HasMaxLength(200).IsRequired();
+            entity.Property(u => u.LogoUrl).HasMaxLength(2048);
+            entity.Property(u => u.PrimaryColor).HasMaxLength(16).IsRequired();
+            entity.Property(u => u.RowVersion).IsRowVersion();
+        });
+        modelBuilder.Entity<ApplicationUser>(entity =>
+        {
+            entity.HasIndex(user => user.UniversityId);
+            entity.HasOne(user => user.University).WithMany().HasForeignKey(user => user.UniversityId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<Faculty>(entity =>
         {

@@ -59,6 +59,19 @@ public sealed class CertificatesController : ControllerBase
             return ValidationProblem(ModelState);
         }
 
+        var executionStrategy = _db.Database.CreateExecutionStrategy();
+        return await executionStrategy.ExecuteAsync(() => IssueWithinTransactionAsync(
+            dto, university.Code, department.Faculty.Name, department.FacultyId, department.Id, department.Name,
+            cancellationToken));
+    }
+
+    private async Task<IActionResult> IssueWithinTransactionAsync(IssueCertificateDto dto, string universityCode,
+        string facultyName, Guid facultyId, Guid departmentId, string departmentName,
+        CancellationToken cancellationToken)
+    {
+        // A retry may run this delegate on the same scoped DbContext. Discard entities
+        // from the failed attempt before creating a fresh atomic issuance graph.
+        _db.ChangeTracker.Clear();
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         Certificate? supersededCertificate = null;
         if (!string.IsNullOrWhiteSpace(dto.SupersedesVerificationCode))
@@ -91,8 +104,8 @@ public sealed class CertificatesController : ControllerBase
         var student = new Student
         {
             Id = Guid.NewGuid(), FirstName = dto.FirstName.Trim(), LastName = dto.LastName.Trim(), FatherName = dto.FatherName.Trim(),
-            TazkiraNumber = dto.TazkiraNumber.Trim(), UniversityId = dto.UniversityId, FacultyId = department.FacultyId,
-            DepartmentId = department.Id, Faculty = department.Faculty.Name, Department = department.Name,
+            TazkiraNumber = dto.TazkiraNumber.Trim(), UniversityId = dto.UniversityId, FacultyId = facultyId,
+            DepartmentId = departmentId, Faculty = facultyName, Department = departmentName,
             GraduationYear = dto.GraduationYear, ProfilePicture = dto.ProfilePicture?.Trim() ?? ""
         };
         var grades = (dto.Subjects ?? []).Select(subject => new Grade
@@ -110,7 +123,7 @@ public sealed class CertificatesController : ControllerBase
             LegacyMaktoubNumber = dto.LegacyMaktoubNumber?.Trim() ?? "", Status = CertificateStatuses.PendingMinistry, SignatureVersion = 5,
             SigningKeyId = _cryptography.ActiveKeyId,
             SupersedesCertificateId = supersededCertificate?.Id,
-            VerificationCode = await GenerateUniqueCodeAsync(university.Code, cancellationToken)
+            VerificationCode = await GenerateUniqueCodeAsync(universityCode, cancellationToken)
         };
         certificate.DigitalHash = _cryptography.SignDocument(student, certificate);
         _db.Students.Add(student);
@@ -136,6 +149,9 @@ public sealed class CertificatesController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<UniversityIssuedCredentialDto>>> Issued(CancellationToken cancellationToken)
     {
         if (!TryGetAuthorizedUniversityId(out var universityId)) return Forbid();
+        if (!await _db.Universities.AsNoTracking()
+                .AnyAsync(university => university.Id == universityId && university.IsActive, cancellationToken))
+            return Forbid();
         var records = await _db.Certificates.AsNoTracking()
             .Where(c => c.Student != null && c.Student.UniversityId == universityId)
             .OrderByDescending(c => c.IssueDate)

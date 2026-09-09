@@ -39,7 +39,7 @@ export default function ResetPassword() {
   const inputClass=(hasError:boolean)=>`w-full rounded-xl border bg-slate-50 px-4 py-3.5 pr-16 outline-none transition focus:bg-white focus:ring-4 ${hasError?'border-red-500 focus:border-red-500 focus:ring-red-100':'border-slate-200 focus:border-emerald-600 focus:ring-emerald-100'}`;
   return <section className="relative isolate flex min-h-[calc(100vh-4.5rem)] items-center justify-center overflow-hidden px-4 py-10">
     <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,#d1fae5,transparent_38%),radial-gradient(circle_at_bottom_right,#e2e8f0,transparent_40%)]" />
-    <div className="w-full max-w-md rounded-3xl border border-white bg-white p-8 shadow-2xl shadow-emerald-950/10">
+    <div className="av-card w-full max-w-md p-8">
       <Link to="/login" className="text-sm font-semibold text-emerald-700">&larr; Return to sign in</Link>
       <div className="mx-auto mt-8 grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-800"><svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
       <h1 className="mt-5 text-center text-3xl font-black tracking-tight text-slate-900">Choose a new password</h1>

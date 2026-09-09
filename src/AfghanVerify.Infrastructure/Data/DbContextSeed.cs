@@ -15,12 +15,28 @@ public static class DbContextSeed
                 .SingleOrDefaultAsync(u => u.Code == item.Code);
             if (university is null)
             {
-                university = new University { Id = StableId($"university:{item.Code}"), Code = item.Code };
+                university = new University
+                {
+                    Id = StableId($"university:{item.Code}"), Code = item.Code, NameEnglish = item.Name,
+                    NameDari = item.Name, NamePashto = item.Name, ShortName = item.Code,
+                    UniversityType = "Public", Province = item.Location, City = item.Location,
+                    CampusBranch = "Main Campus", OfficialAddress = $"{item.Location}, Afghanistan",
+                    OfficialEmail = $"registry@{item.Code.ToLowerInvariant()}.edu.af", OfficialPhoneNumber = "+93 000 000 000",
+                    Location = item.Location, LogoUrl = $"/api/universities/{item.Code}/logo",
+                    PrimaryColor = "#065f46", IsActive = true
+                };
                 context.Universities.Add(university);
             }
-            university.NameEnglish = item.Name; university.NameDari = item.Name; university.NamePashto = item.Name;
-            university.Location = item.Location; university.LogoUrl = $"/api/universities/{item.Code}/logo";
-            university.PrimaryColor = "#065f46"; university.IsActive = true;
+            // Backfill newly introduced registration fields once, but never overwrite an
+            // administrator's edits or reactivate a university during application startup.
+            if (string.IsNullOrWhiteSpace(university.ShortName)) university.ShortName = item.Code;
+            if (string.IsNullOrWhiteSpace(university.UniversityType)) university.UniversityType = "Public";
+            if (string.IsNullOrWhiteSpace(university.Province)) university.Province = item.Location;
+            if (string.IsNullOrWhiteSpace(university.City)) university.City = item.Location;
+            if (string.IsNullOrWhiteSpace(university.CampusBranch)) university.CampusBranch = "Main Campus";
+            if (string.IsNullOrWhiteSpace(university.OfficialAddress)) university.OfficialAddress = $"{item.Location}, Afghanistan";
+            if (string.IsNullOrWhiteSpace(university.OfficialEmail)) university.OfficialEmail = $"registry@{item.Code.ToLowerInvariant()}.edu.af";
+            if (string.IsNullOrWhiteSpace(university.OfficialPhoneNumber)) university.OfficialPhoneNumber = "+93 000 000 000";
             foreach (var facultyItem in item.Faculties)
             {
                 var faculty = university.Faculties.SingleOrDefault(f => f.Name == facultyItem.Name);

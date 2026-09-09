@@ -62,6 +62,15 @@ public static class IdentitySeeder
             if (!await userManager.IsInRoleAsync(user, role))
                 EnsureSucceeded(await userManager.AddToRoleAsync(user, role), $"assign role '{role}'");
 
+            // Bootstrap configuration is authoritative. Removing obsolete managed roles
+            // prevents accidental privilege accumulation when an account changes tier.
+            var obsoleteRoles = (await userManager.GetRolesAsync(user))
+                .Where(currentRole => Roles.Contains(currentRole, StringComparer.OrdinalIgnoreCase)
+                    && !currentRole.Equals(role, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            if (obsoleteRoles.Length > 0)
+                EnsureSucceeded(await userManager.RemoveFromRolesAsync(user, obsoleteRoles), $"remove obsolete roles from '{username}'");
+
             if (bool.TryParse(entry["SynchronizePassword"], out var synchronizePassword) && synchronizePassword)
             {
                 if (!await userManager.CheckPasswordAsync(user, password))

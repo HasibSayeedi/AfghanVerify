@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ShieldCheck, UserRound } from 'lucide-react';
 import { api, getApiError } from '../../lib/api';
 import type { AuthSession, University } from '../../types';
 
@@ -85,41 +86,53 @@ export default function AccountSettings({ session }: { session: AuthSession }) {
     } finally { setSaving(false); }
   };
 
-  return <section className="min-h-full bg-slate-100 px-4 pb-10 pt-px sm:px-6">
-    <div className="mt-10 w-full max-w-xl mx-auto rounded-xl border-t-4 border-t-amber-500 bg-white p-8 shadow-md">
-      <header>
+  const initials = session.displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('');
+
+  return <section className="min-h-full bg-slate-100 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="av-card av-card-accent mx-auto w-full max-w-6xl p-5 sm:p-8 lg:p-10">
+      <header className="max-w-3xl">
         <p className="text-xs font-bold uppercase tracking-[.22em] text-[#02614d]">Personal profile</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Account settings</h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">Review your account identity and manage your password securely.</p>
       </header>
 
-      <section aria-labelledby="identity-summary-title" className="mt-7 rounded-xl border border-slate-200 bg-slate-50/80 p-5">
-        <h2 id="identity-summary-title" className="text-sm font-bold text-slate-900">User identity summary</h2>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Full name</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{session.displayName}</dd></div>
-          <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Email address</dt><dd className="mt-1 break-all text-sm font-semibold text-slate-800">{session.username}</dd></div>
-          <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Role</dt><dd className="mt-1"><span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-[#02382c]">{roleLabels[session.role]}</span></dd></div>
-          <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Assigned institution</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{assignedInstitution}</dd></div>
-        </dl>
-      </section>
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+        <section aria-labelledby="identity-summary-title" className="av-card-muted p-5 sm:p-6">
+          <h2 id="identity-summary-title" className="text-base font-bold text-slate-900">User identity summary</h2>
+          <div className="mt-6 flex flex-col items-center border-b border-slate-200 pb-6 text-center">
+            <div className="relative grid h-24 w-24 place-items-center rounded-full bg-[#02382c] text-2xl font-black tracking-wide text-white shadow-lg shadow-emerald-950/20">
+              {initials || <UserRound className="h-11 w-11" aria-hidden="true"/>}
+              <span className="absolute right-0 bottom-0 grid h-8 w-8 place-items-center rounded-full border-4 border-slate-50 bg-amber-500 text-white"><ShieldCheck className="h-4 w-4" aria-hidden="true"/></span>
+            </div>
+            <p className="mt-4 text-lg font-bold text-slate-950">{session.displayName}</p>
+            <p className="mt-1 break-all text-sm text-slate-500">{session.username}</p>
+          </div>
+          <dl className="mt-6 space-y-5">
+            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Full name</dt><dd className="mt-1 text-sm font-semibold text-slate-800">{session.displayName}</dd></div>
+            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Email address</dt><dd className="mt-1 break-all text-sm font-semibold text-slate-800">{session.username}</dd></div>
+            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Role</dt><dd className="mt-2"><span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-[#02382c]">{roleLabels[session.role]}</span></dd></div>
+            <div><dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Assigned institution</dt><dd className="mt-1 text-sm font-semibold leading-6 text-slate-800">{assignedInstitution}</dd></div>
+          </dl>
+        </section>
 
-      <section aria-labelledby="password-title" className="mt-8 border-t border-slate-200 pt-7">
-        <h2 id="password-title" className="text-lg font-bold text-slate-900">Security and password</h2>
-        <p className="mt-1 text-sm text-slate-500">Enter your current password to authorize the change.</p>
+        <section aria-labelledby="password-title" className="av-card p-5 sm:p-6 lg:p-8">
+          <h2 id="password-title" className="av-card-title text-xl">Security and password</h2>
+          <p className="av-card-copy mt-1 text-sm">Enter your current password to authorize the change.</p>
 
-        {success && <p role="status" aria-live="polite" className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800">{success}</p>}
-        {error && <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{error}</p>}
+          {success && <p role="status" aria-live="polite" className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800">{success}</p>}
+          {error && <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{error}</p>}
 
-        <form onSubmit={submit} className="mt-6 space-y-6">
-          <PasswordField label="Current password" required value={currentPassword} visible={visibility.current} autoComplete="current-password" onChange={value => updateField(setCurrentPassword, value)} onBlur={() => setTouched(current => ({ ...current, current: true }))} onToggle={() => setVisibility(current => ({ ...current, current: !current.current }))} error={touched.current && currentMissing ? 'Current password is required.' : undefined} />
-          <PasswordField label="New password (optional)" value={newPassword} visible={visibility.next} autoComplete="new-password" placeholder="At least 8 characters" onChange={value => updateField(setNewPassword, value)} onBlur={() => setTouched(current => ({ ...current, next: true }))} onToggle={() => setVisibility(current => ({ ...current, next: !current.next }))} error={touched.next && newPasswordTooShort ? 'New password must contain at least 8 characters.' : undefined} />
-          <PasswordField label="Confirm new password" value={confirmPassword} visible={visibility.confirm} autoComplete="new-password" placeholder="Repeat new password" onChange={value => updateField(setConfirmPassword, value)} onBlur={() => setTouched(current => ({ ...current, confirm: true }))} onToggle={() => setVisibility(current => ({ ...current, confirm: !current.confirm }))} error={touched.confirm && passwordsDoNotMatch ? 'Passwords do not match.' : undefined} />
+          <form noValidate onSubmit={submit} className="mt-7 space-y-6">
+            <PasswordField label="Current password" required value={currentPassword} visible={visibility.current} autoComplete="current-password" onChange={value => updateField(setCurrentPassword, value)} onBlur={() => setTouched(current => ({ ...current, current: true }))} onToggle={() => setVisibility(current => ({ ...current, current: !current.current }))} error={touched.current && currentMissing ? 'Current password is required.' : undefined} />
+            <PasswordField label="New password" value={newPassword} visible={visibility.next} autoComplete="new-password" placeholder="At least 8 characters" onChange={value => updateField(setNewPassword, value)} onBlur={() => setTouched(current => ({ ...current, next: true }))} onToggle={() => setVisibility(current => ({ ...current, next: !current.next }))} error={touched.next && newPasswordTooShort ? 'New password must contain at least 8 characters.' : undefined} />
+            <PasswordField label="Confirm new password" value={confirmPassword} visible={visibility.confirm} autoComplete="new-password" placeholder="Repeat new password" onChange={value => updateField(setConfirmPassword, value)} onBlur={() => setTouched(current => ({ ...current, confirm: true }))} onToggle={() => setVisibility(current => ({ ...current, confirm: !current.confirm }))} error={touched.confirm && passwordsDoNotMatch ? 'Passwords do not match.' : undefined} />
 
-          <footer className="mt-8 flex justify-end border-t border-slate-100 pt-6">
-            <button type="submit" disabled={!canSubmit} className="rounded-xl bg-[#02382c] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/10 transition hover:bg-[#034d3d] disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'Updating password...' : 'Update password'}</button>
-          </footer>
-        </form>
-      </section>
+            <footer className="mt-8 flex justify-end border-t border-slate-100 pt-6">
+              <button type="submit" disabled={!canSubmit} className="w-full rounded-xl bg-[#02382c] px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/10 transition hover:bg-[#034d3d] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">{saving ? 'Updating password...' : 'Update password'}</button>
+            </footer>
+          </form>
+        </section>
+      </div>
     </div>
   </section>;
 }

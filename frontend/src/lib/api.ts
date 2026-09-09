@@ -9,6 +9,7 @@ export const publicVerifyBaseUrl = (import.meta.env.VITE_PUBLIC_VERIFY_BASE_URL 
 export const api = axios.create({ baseURL: configuredBase, timeout: 15_000 });
 
 const storageKey = 'afghanverify.session';
+export const sessionClearedEvent = 'afghanverify:session-cleared';
 export function readSession(): AuthSession | null {
   const raw = sessionStorage.getItem(storageKey);
   if (!raw) return null;
@@ -25,7 +26,10 @@ export function readSession(): AuthSession | null {
   }
 }
 export const saveSession = (session: AuthSession) => sessionStorage.setItem(storageKey, JSON.stringify(session));
-export const clearSession = () => sessionStorage.removeItem(storageKey);
+export const clearSession = () => {
+  sessionStorage.removeItem(storageKey);
+  window.dispatchEvent(new Event(sessionClearedEvent));
+};
 
 api.interceptors.request.use((config) => {
   const token = readSession()?.token;
@@ -42,7 +46,7 @@ export function getApiError(error: unknown, fallback: string): string {
   if (axios.isAxiosError(error)) {
     const validationErrors = error.response?.data?.errors as Record<string, string[]> | undefined;
     const details = validationErrors ? Object.values(validationErrors).flat().join(' ') : undefined;
-    return details || error.response?.data?.message || error.response?.data?.title || fallback;
+    return details || error.response?.data?.message || error.response?.data?.detail || error.response?.data?.title || fallback;
   }
   return fallback;
 }

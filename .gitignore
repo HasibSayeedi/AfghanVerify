@@ -64,6 +64,7 @@ logs/
 *.swo
 
 # Local databases and generated data
+**/Data/UniversityLogos/
 *.db
 *.db-shm
 *.db-wal

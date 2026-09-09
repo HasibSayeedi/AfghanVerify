@@ -8,10 +8,13 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <!-- Pin the patched version because EF design-time dependencies otherwise resolve vulnerable 9.0.0 transitively. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.11" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/AfghanVerify.Infrastructure/AfghanVerify.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/AfghanVerify.WebApi/AfghanVerify.WebApi.csproj" />
   </ItemGroup>
 </Project>

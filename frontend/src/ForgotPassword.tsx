@@ -37,7 +37,7 @@ export default function ForgotPassword() {
 
   return <section className="relative isolate flex min-h-[calc(100vh-4.5rem)] items-center justify-center overflow-hidden px-4 py-10">
     <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,#d1fae5,transparent_38%),radial-gradient(circle_at_bottom_right,#e2e8f0,transparent_40%)]" />
-    <div className="w-full max-w-md rounded-3xl border border-white bg-white p-8 shadow-2xl shadow-emerald-950/10">
+    <div className="av-card w-full max-w-md p-8">
       <Link to="/login" className="text-sm font-semibold text-emerald-700">&larr; Return to sign in</Link>
       <div className="mx-auto mt-8 grid h-20 w-20 place-items-center rounded-2xl bg-emerald-50 text-emerald-800">
         <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>

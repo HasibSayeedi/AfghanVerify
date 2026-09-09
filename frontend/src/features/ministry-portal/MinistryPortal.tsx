@@ -294,7 +294,7 @@ export default function MinistryPortal() {
     {message&&<div className={`mt-6 rounded-xl border px-5 py-4 text-sm font-bold ${message.error?'border-red-200 bg-red-50 text-red-700':'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>{message.text}</div>}
 
     <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_390px]">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="av-card overflow-hidden">
         <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-5 sm:px-6">
           <h2 className="font-black">Incoming records</h2>
           <button type="button" onClick={refreshRecords} className="text-xs font-bold text-emerald-700">Refresh {recordsTab==='pending'?'queue':'history'}</button>

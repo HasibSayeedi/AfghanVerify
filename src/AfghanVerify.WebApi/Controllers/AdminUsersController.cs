@@ -49,6 +49,7 @@ public sealed class AdminUsersController : ControllerBase
             var roles = await _userManager.GetRolesAsync(user);
             var managedRole = roles.FirstOrDefault(IsManagedRole);
             if (managedRole is null) continue;
+            if (!User.IsInRole(SuperAdminRole) && managedRole != UniversityRole) continue;
             response.Add(ToDto(user, managedRole, universities));
         }
         return Ok(response);
@@ -128,6 +129,7 @@ public sealed class AdminUsersController : ControllerBase
         var roles = await _userManager.GetRolesAsync(user);
         var managedRole = roles.FirstOrDefault(IsManagedRole);
         if (managedRole is null) return BadRequest(new { message = "Only Ministry and university staff accounts can be managed here." });
+        if (!User.IsInRole(SuperAdminRole) && managedRole != UniversityRole) return Forbid();
 
         var lockoutEnabledResult = await _userManager.SetLockoutEnabledAsync(user, true);
         if (!lockoutEnabledResult.Succeeded) return IdentityValidationProblem(lockoutEnabledResult);
@@ -156,9 +158,12 @@ public sealed class AdminUsersController : ControllerBase
         var user = await _userManager.FindByIdAsync(id.ToString());
         if (user is null || user.IsDeleted) return NotFound(new { message = "The selected staff account was not found." });
         if (!CanManage(user)) return Forbid();
+        if (!User.IsInRole(SuperAdminRole) && IsCurrentUser(id))
+            return BadRequest(new { message = "Use Account Settings to update your own administrator account." });
         var roles = await _userManager.GetRolesAsync(user);
         var currentRole = roles.FirstOrDefault(IsManagedRole);
         if (currentRole is null) return BadRequest(new { message = "Only Ministry and university staff accounts can be managed here." });
+        if (!User.IsInRole(SuperAdminRole) && currentRole != UniversityRole) return Forbid();
 
         var email = request.Email.Trim().ToLowerInvariant();
         var duplicate = await _userManager.FindByEmailAsync(email);
@@ -198,6 +203,28 @@ public sealed class AdminUsersController : ControllerBase
             }
             universityName = university.NameEnglish;
         }
+
+        var executionStrategy = _db.Database.CreateExecutionStrategy();
+        return await executionStrategy.ExecuteAsync(() => UpdateWithinTransactionAsync(
+            id, request, email, requestedRole, universityId, universityName, cancellationToken));
+    }
+
+    private async Task<ActionResult<StaffUserDto>> UpdateWithinTransactionAsync(Guid id, UpdateStaffUserDto request,
+        string email, string requestedRole, Guid? universityId, string? universityName,
+        CancellationToken cancellationToken)
+    {
+        // Each execution-strategy retry must start from current database state.
+        _db.ChangeTracker.Clear();
+        var user = await _userManager.FindByIdAsync(id.ToString());
+        if (user is null || user.IsDeleted)
+            return NotFound(new { message = "The selected staff account was not found." });
+        if (!CanManage(user)) return Forbid();
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var currentRole = roles.FirstOrDefault(IsManagedRole);
+        if (currentRole is null)
+            return BadRequest(new { message = "Only Ministry and university staff accounts can be managed here." });
+        if (!User.IsInRole(SuperAdminRole) && currentRole != UniversityRole) return Forbid();
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         user.DisplayName = request.FullName.Trim();
@@ -239,6 +266,7 @@ public sealed class AdminUsersController : ControllerBase
         var roles = await _userManager.GetRolesAsync(user);
         if (!roles.Any(IsManagedRole))
             return BadRequest(new { message = "Only Ministry and university staff accounts can be managed here." });
+        if (!User.IsInRole(SuperAdminRole) && !roles.Contains(UniversityRole)) return Forbid();
 
         user.IsDeleted = true;
         user.LockoutEnabled = true;
