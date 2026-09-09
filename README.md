@@ -27,6 +27,101 @@ The solution uses an ASP.NET Core 10 API, React 19 with TypeScript, SQL Server, 
 
 ---
 
+## Platform screenshots
+
+### Public verification experience
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/01-home.png" alt="Afghan Verify public home page" />
+      <br /><strong>Public home page</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/02-verification-result.png" alt="Verified academic credential result" />
+      <br /><strong>Credential verification result</strong>
+    </td>
+  </tr>
+</table>
+
+### Official credential views
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/03-diploma.png" alt="Official verified diploma view" />
+      <br /><strong>Verified diploma</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/04-transcript.png" alt="Official verified transcript view" />
+      <br /><strong>Verified transcript</strong>
+    </td>
+  </tr>
+</table>
+
+### University workspace
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/12-uinversity-dashboard.png" alt="University workspace dashboard" />
+      <br /><strong>University dashboard</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/07-issue-credential.png" alt="Secure academic credential issuance form" />
+      <br /><strong>Issue credential</strong>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <img src="docs/screenshots/06-university-issued-recordes.png" alt="University issued academic records" />
+      <br /><strong>Issued records</strong>
+    </td>
+  </tr>
+</table>
+
+### Ministry workspace
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/05-ministry-dashboard.png" alt="Ministry credential oversight dashboard" />
+      <br /><strong>Ministry dashboard</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/13-ministry-review.png" alt="Ministry credential review queue" />
+      <br /><strong>Credential review queue</strong>
+    </td>
+  </tr>
+</table>
+
+### Platform administration
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/08-super-admin-dashboard.png" alt="Super Admin dashboard" />
+      <br /><strong>Super Admin dashboard</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/09-super-admin-userManagement.png" alt="Staff user management" />
+      <br /><strong>User management</strong>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/10-super-admin-universities.png" alt="University management" />
+      <br /><strong>University management</strong>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/11-super-admin-auditLogs.png" alt="Security audit logs" />
+      <br /><strong>Audit logs</strong>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## Public website
 
 The public experience includes:
