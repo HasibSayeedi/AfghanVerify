@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, Building2, ChevronDown, ChevronRight, Eye, GraduationCap, ImagePlus, Pencil, Plus, Search, ShieldCheck, Trash2, UsersRound, X, type LucideIcon } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { api, getApiError, readSession } from '../../lib/api';
+import RecordsPagination from '../../components/RecordsPagination';
 
 interface ManagedUniversity {
   id: string;
@@ -180,6 +181,10 @@ function UniversityManagementDashboard() {
       return matchesStatus && matchesQuery;
     });
   }, [search, statusFilter, universities]);
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / 15));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedUniversities = filtered.slice((currentPage - 1) * 15, currentPage * 15);
 
   const stats = useMemo(() => ({
     total: universities.length,
@@ -315,26 +320,32 @@ function UniversityManagementDashboard() {
       </div>
 
       <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-        <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search by name, code, province, or city..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pr-4 pl-11 text-sm outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100"/></div>
-        <select value={statusFilter} onChange={event => setStatusFilter(event.target.value as typeof statusFilter)} className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"><option value="All">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+        <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"/><input value={search} onChange={event => { setSearch(event.target.value); setPage(1); }} placeholder="Search by name, code, province, or city..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pr-4 pl-11 text-sm outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-100"/></div>
+        <select value={statusFilter} onChange={event => { setStatusFilter(event.target.value as typeof statusFilter); setPage(1); }} className="min-h-12 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"><option value="All">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
       </div>
 
       <div className="av-card mt-5 overflow-hidden">
-        <div className="overflow-x-auto"><table className="w-full min-w-[1060px] text-left">
-          <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold uppercase tracking-[.12em] text-slate-500"><tr><th className="px-5 py-4">University</th><th className="px-5 py-4">Code / Type</th><th className="px-5 py-4">Province / City</th><th className="px-5 py-4">Users</th><th className="px-5 py-4">Students</th><th className="px-5 py-4">Status</th><th className="px-5 py-4 text-right">Actions</th></tr></thead>
+        <div className="hidden overflow-hidden xl:block"><table className="w-full table-fixed text-left">
+          <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-extrabold uppercase tracking-[.12em] text-slate-500"><tr><th className="w-[28%] px-3 py-4 xl:px-4">University</th><th className="w-[12%] px-3 py-4 xl:px-4">Code / Type</th><th className="w-[16%] px-3 py-4 xl:px-4">Province / City</th><th className="hidden w-[7%] px-3 py-4 2xl:table-cell">Users</th><th className="hidden w-[7%] px-3 py-4 2xl:table-cell">Students</th><th className="w-[12%] px-3 py-4 xl:px-4">Status</th><th className="w-64 px-5 py-4 text-right">Actions</th></tr></thead>
           <tbody className="divide-y divide-slate-100 text-sm">
             {loading && <tr><td colSpan={7} className="px-6 py-14 text-center text-slate-500">Loading registered universities...</td></tr>}
             {!loading && filtered.length === 0 && <tr><td colSpan={7} className="px-6 py-14 text-center text-slate-500">No universities match the current filters.</td></tr>}
-            {!loading && filtered.map(item => <tr key={item.id} className="transition hover:bg-slate-50/80">
+            {!loading && paginatedUniversities.map(item => <tr key={item.id} className="transition hover:bg-slate-50/80">
               <td className="px-5 py-4"><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 font-black text-emerald-800">{item.code}</span><div><p className="font-bold text-slate-900">{item.officialName}</p><p className="mt-0.5 text-xs text-slate-500">{item.shortName}{item.assignedAdminName ? ` · ${item.assignedAdminName}` : ''}</p></div></div></td>
               <td className="px-5 py-4"><p className="font-bold text-slate-800">{item.code}</p><p className="text-xs text-slate-500">{item.universityType}</p></td>
               <td className="px-5 py-4 text-slate-700">{item.province}<span className="block text-xs text-slate-500">{item.city}</span></td>
-              <td className="px-5 py-4 font-bold text-slate-800">{item.userCount}</td><td className="px-5 py-4 font-bold text-slate-800">{item.studentCount}</td>
+              <td className="hidden px-3 py-4 font-bold text-slate-800 2xl:table-cell">{item.userCount}</td><td className="hidden px-3 py-4 font-bold text-slate-800 2xl:table-cell">{item.studentCount}</td>
               <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold ${item.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}><span className={`h-2 w-2 rounded-full ${item.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`}/>{item.isActive ? 'Active' : 'Inactive'}</span></td>
               <td className="px-5 py-4 align-middle"><div className="flex items-center justify-end gap-4"><TableActionButton label="Manage Faculties & Departments" onClick={() => setStructureUniversity(item)} className="grid h-9 w-9 place-items-center rounded-lg text-amber-700 transition hover:bg-amber-50"><BookOpen className="h-[18px] w-[18px]"/></TableActionButton><TableActionButton label="View Details" onClick={() => setViewing(item)} className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"><Eye className="h-[18px] w-[18px]"/></TableActionButton><TableActionButton label="Edit University" onClick={() => openEdit(item)} className="grid h-9 w-9 place-items-center rounded-lg text-emerald-700 transition hover:bg-emerald-50"><Pencil className="h-[18px] w-[18px]"/></TableActionButton><button type="button" role="switch" aria-checked={item.isActive} aria-label={`${item.isActive ? 'Deactivate' : 'Activate'} ${item.officialName}`} disabled={changingStatusId === item.id} onClick={() => void toggleStatus(item)} className={`relative inline-flex h-7 w-12 items-center rounded-full border transition focus:outline-none focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 ${item.isActive ? 'border-[#02382c] bg-[#02382c]' : 'border-slate-300 bg-slate-200'}`}><span className={`h-5 w-5 rounded-full border border-slate-200 bg-white shadow-sm transition-transform ${item.isActive ? 'translate-x-6' : 'translate-x-1'}`}/></button></div></td>
             </tr>)}
           </tbody>
         </table></div>
+        <div className="divide-y divide-slate-100 xl:hidden">
+          {loading && <p className="px-5 py-12 text-center text-sm text-slate-500">Loading registered universities...</p>}
+          {!loading && filtered.length === 0 && <p className="px-5 py-12 text-center text-sm text-slate-500">No universities match the current filters.</p>}
+          {!loading && paginatedUniversities.map(item => <article key={item.id} className="p-4 sm:p-5"><div className="flex items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-sm font-black text-emerald-800">{item.code}</span><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-bold text-slate-900">{item.officialName}</h3><p className="mt-1 text-xs text-slate-500">{item.universityType} · {item.city}, {item.province}</p></div><span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${item.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}><span className={`h-2 w-2 rounded-full ${item.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`}/>{item.isActive ? 'Active' : 'Inactive'}</span></div><p className="mt-2 truncate text-xs text-slate-500">{item.shortName}{item.assignedAdminName ? ` · ${item.assignedAdminName}` : ''}</p></div></div><div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-3"><TableActionButton label="Manage Faculties & Departments" onClick={() => setStructureUniversity(item)} className="grid h-10 w-10 place-items-center rounded-lg text-amber-700 hover:bg-amber-50"><BookOpen className="h-[18px] w-[18px]"/></TableActionButton><TableActionButton label="View Details" onClick={() => setViewing(item)} className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"><Eye className="h-[18px] w-[18px]"/></TableActionButton><TableActionButton label="Edit University" onClick={() => openEdit(item)} className="grid h-10 w-10 place-items-center rounded-lg text-emerald-700 hover:bg-emerald-50"><Pencil className="h-[18px] w-[18px]"/></TableActionButton><button type="button" role="switch" aria-checked={item.isActive} aria-label={`${item.isActive ? 'Deactivate' : 'Activate'} ${item.officialName}`} disabled={changingStatusId === item.id} onClick={() => void toggleStatus(item)} className={`relative inline-flex h-7 w-12 items-center rounded-full border disabled:opacity-50 ${item.isActive ? 'border-[#02382c] bg-[#02382c]' : 'border-slate-300 bg-slate-200'}`}><span className={`h-5 w-5 rounded-full border border-slate-200 bg-white shadow-sm transition-transform ${item.isActive ? 'translate-x-6' : 'translate-x-1'}`}/></button></div></article>)}
+        </div>
+        {!loading&&<RecordsPagination page={currentPage} totalPages={totalPages} onChange={nextPage => setPage(nextPage)}/>} 
       </div>
     </div>
 

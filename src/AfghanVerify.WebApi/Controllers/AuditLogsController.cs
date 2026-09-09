@@ -15,7 +15,10 @@ public sealed class AuditLogsController : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = 50,
-        [FromQuery] string? query = null, [FromQuery] string? action = null, CancellationToken cancellationToken = default)
+        [FromQuery] string? query = null, [FromQuery] string? action = null,
+        [FromQuery] string? entityType = null, [FromQuery] string? outcome = null,
+        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null,
+        CancellationToken cancellationToken = default)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
@@ -25,10 +28,23 @@ public sealed class AuditLogsController : ControllerBase
             var normalizedAction = action.Trim();
             logs = logs.Where(log => log.Action == normalizedAction);
         }
+        if (!string.IsNullOrWhiteSpace(entityType))
+        {
+            var normalizedEntityType = entityType.Trim();
+            logs = logs.Where(log => log.EntityType == normalizedEntityType);
+        }
+        if (!string.IsNullOrWhiteSpace(outcome))
+        {
+            var normalizedOutcome = outcome.Trim();
+            logs = logs.Where(log => log.Outcome == normalizedOutcome);
+        }
+        if (from.HasValue) logs = logs.Where(log => log.CreatedAt >= from.Value.ToUniversalTime());
+        if (to.HasValue) logs = logs.Where(log => log.CreatedAt <= to.Value.ToUniversalTime());
         if (!string.IsNullOrWhiteSpace(query))
         {
             var normalizedQuery = query.Trim();
-            logs = logs.Where(log => log.UserName.Contains(normalizedQuery) || log.EntityId.Contains(normalizedQuery)
+            logs = logs.Where(log => log.UserName.Contains(normalizedQuery) || log.ActorRole.Contains(normalizedQuery)
+                || log.EntityId.Contains(normalizedQuery) || log.EntityType.Contains(normalizedQuery)
                 || log.Action.Contains(normalizedQuery) || log.Details.Contains(normalizedQuery));
         }
         var totalCount = await logs.CountAsync(cancellationToken);
@@ -36,9 +52,18 @@ public sealed class AuditLogsController : ControllerBase
             .Skip((page - 1) * pageSize).Take(pageSize)
             .Select(log => new
             {
-                log.Id, log.CreatedAt, log.UserId, log.UserName, log.Action, log.EntityType,
-                log.EntityId, log.Details, log.IpAddress, log.UserAgent
+                log.Id, log.CreatedAt, log.UserId, log.UserName, log.ActorRole, log.Action, log.EntityType,
+                log.EntityId, log.Details, log.Outcome, log.IpAddress, log.UserAgent
             }).ToListAsync(cancellationToken);
-        return Ok(new { items, totalCount, page, pageSize, totalPages = (int)Math.Ceiling(totalCount / (double)pageSize) });
+        var allLogs = _db.AuditLogs.AsNoTracking();
+        var actions = await allLogs.Select(log => log.Action).Distinct().OrderBy(value => value).ToListAsync(cancellationToken);
+        var entityTypes = await allLogs.Select(log => log.EntityType).Distinct().OrderBy(value => value).ToListAsync(cancellationToken);
+        var outcomes = await allLogs.Select(log => log.Outcome).Distinct().OrderBy(value => value).ToListAsync(cancellationToken);
+        return Ok(new
+        {
+            items, totalCount, page, pageSize,
+            totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+            filters = new { actions, entityTypes, outcomes }
+        });
     }
 }

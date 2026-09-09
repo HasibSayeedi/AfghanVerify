@@ -84,7 +84,7 @@ export default function VerifyDocument() {
   return <>
     <section className="relative isolate overflow-hidden bg-emerald-950 px-4 pb-24 pt-16 text-white sm:pt-24 print:hidden">
       <div className="absolute inset-0 -z-10 opacity-25 [background-image:radial-gradient(circle_at_20%_10%,#34d399,transparent_28%),radial-gradient(circle_at_80%_80%,#0f766e,transparent_35%)]" />
-      <div className="mx-auto max-w-4xl text-center animate-rise"><div className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-200"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />Official national verification service</div>
+      <div className="av-page-container"><div className="mx-auto max-w-4xl text-center animate-rise"><div className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-xs font-bold text-emerald-200"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />Official national verification service</div>
         <h1 className="text-4xl font-black tracking-tight sm:text-6xl">Trust every credential.<br/><span className="text-emerald-300">Verify in seconds.</span></h1>
         <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-emerald-100/75 sm:text-lg">Confirm diplomas and transcripts issued by accredited Afghan universities through the Ministry of Higher Education registry.</p>
         <form noValidate onSubmit={submit} className="mx-auto mt-9 max-w-2xl rounded-2xl bg-white p-2 shadow-2xl shadow-black/25">
@@ -113,9 +113,9 @@ export default function VerifyDocument() {
         </form>
         <button onClick={()=>setShowScanner(v=>!v)} className="mt-5 text-sm font-bold text-emerald-200 hover:text-white">{showScanner?'Close camera':'Scan a credential QR code →'}</button>
         {showScanner && <div className="mx-auto mt-6 max-w-sm animate-rise"><Suspense fallback={<div className="aspect-square animate-pulse rounded-2xl bg-emerald-900" />}><QrScanner onScanSuccess={(value)=>{setShowScanner(false); void verify(value);}} /></Suspense></div>}
-      </div>
+      </div></div>
     </section>
-    <section className="print-shell relative z-10 mx-auto -mt-12 min-h-40 max-w-5xl px-4 pb-20 sm:px-6">
+    <section className="av-page-container print-shell relative z-10 -mt-12 min-h-40 pb-20">
       {error && <div role="alert" className="av-card av-card-danger animate-rise p-6 text-center"><p className="font-bold text-red-700">Verification unsuccessful</p><p className="av-card-copy mt-1 text-sm">{error}</p></div>}
       {!result && !error && <div className="grid auto-rows-fr gap-4 sm:grid-cols-3">{[
         [KeyRound, '01', 'Enter the archive code', 'Use the unique code printed on the credential.'],

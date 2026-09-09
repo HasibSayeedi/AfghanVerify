@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Search, ShieldCheck, X } from 'lucide-react';
 import { api, getApiError } from '../../lib/api';
+import { useSearchParams } from 'react-router-dom';
+import RecordsPagination from '../../components/RecordsPagination';
 
 interface QueueItem {
   trackingCode:string;
@@ -21,6 +23,7 @@ interface QueueItem {
 
 type RecordsTab = 'pending'|'history';
 type StatisticsPeriod = 'week'|'month'|'year';
+const recordsPerPage=15;
 
 interface ReviewStatistics {
   period:StatisticsPeriod;
@@ -95,13 +98,16 @@ function HistorySearch({value,onChange,resultCount,totalCount}:HistorySearchProp
 }
 
 export default function MinistryPortal() {
+  const [searchParams,setSearchParams]=useSearchParams();
   const [queue,setQueue]=useState<QueueItem[]>([]);
   const [selected,setSelected]=useState<QueueItem|null>(null);
-  const [recordsTab,setRecordsTab]=useState<RecordsTab>('pending');
+  const [recordsTab,setRecordsTab]=useState<RecordsTab>(()=>searchParams.get('tab')==='history'?'history':'pending');
   const [history,setHistory]=useState<QueueItem[]>([]);
   const [historyLoaded,setHistoryLoaded]=useState(false);
-  const [historyLoading,setHistoryLoading]=useState(false);
+  const [historyLoading,setHistoryLoading]=useState(()=>searchParams.get('tab')==='history');
   const [historyQuery,setHistoryQuery]=useState('');
+  const [pendingPage,setPendingPage]=useState(1);
+  const [historyPage,setHistoryPage]=useState(1);
   const [remarks,setRemarks]=useState('');
   const [remarksError,setRemarksError]=useState('');
   const [lifecycleReason,setLifecycleReason]=useState('');
@@ -114,11 +120,16 @@ export default function MinistryPortal() {
   const statisticsRequestId=useRef(0);
 
   const filteredHistory=history.filter(record=>matchesHistorySearch(record,historyQuery));
+  const pendingPageCount=Math.max(1,Math.ceil(queue.length/recordsPerPage));
+  const historyPageCount=Math.max(1,Math.ceil(filteredHistory.length/recordsPerPage));
+  const paginatedQueue=queue.slice((pendingPage-1)*recordsPerPage,pendingPage*recordsPerPage);
+  const paginatedHistory=filteredHistory.slice((historyPage-1)*recordsPerPage,historyPage*recordsPerPage);
 
   const load=async()=>{
     try {
       const {data}=await api.get<QueueItem[]>('/api/ministry/queue');
       setQueue(data);
+      setPendingPage(current=>Math.min(current,Math.max(1,Math.ceil(data.length/recordsPerPage))));
     } catch(error) {
       setMessage({error:true,text:getApiError(error,'Could not load the review queue.')});
     }
@@ -129,6 +140,7 @@ export default function MinistryPortal() {
     try {
       const {data}=await api.get<QueueItem[]>('/api/ministry/history');
       setHistory(data);
+      setHistoryPage(current=>Math.min(current,Math.max(1,Math.ceil(data.length/recordsPerPage))));
       setHistoryLoaded(true);
     } catch(error) {
       setMessage({error:true,text:getApiError(error,'Could not load processed credential history.')});
@@ -159,6 +171,10 @@ export default function MinistryPortal() {
       .then(({data})=>{if(active)setStatistics(data);})
       .catch(()=>{if(active)setStatistics(emptyStatistics('week'));})
       .finally(()=>{if(active)setStatisticsLoading(false);});
+    if(new URLSearchParams(window.location.search).get('tab')==='history')void api.get<QueueItem[]>('/api/ministry/history')
+      .then(({data})=>{if(active){setHistory(data);setHistoryLoaded(true);}})
+      .catch(error=>{if(active)setMessage({error:true,text:getApiError(error,'Could not load processed credential history.')});})
+      .finally(()=>{if(active)setHistoryLoading(false);});
     return()=>{active=false;};
   },[]);
 
@@ -170,6 +186,7 @@ export default function MinistryPortal() {
 
   const changeRecordsTab=(tab:RecordsTab)=>{
     setRecordsTab(tab);
+    setSearchParams(tab==='history'?{tab:'history'}:{});
     setSelected(null);
     setRemarks('');
     setRemarksError('');
@@ -253,7 +270,22 @@ export default function MinistryPortal() {
 
   const updateHistoryQuery=(value:string)=>{
     setHistoryQuery(value);
+    setHistoryPage(1);
     if(selected&&!matchesHistorySearch(selected,value))setSelected(null);
+  };
+
+  const changePendingPage=(page:number)=>{
+    setPendingPage(Math.min(Math.max(page,1),pendingPageCount));
+    setSelected(null);
+    setRemarks('');
+    setRemarksError('');
+  };
+
+  const changeHistoryPage=(page:number)=>{
+    setHistoryPage(Math.min(Math.max(page,1),historyPageCount));
+    setSelected(null);
+    setLifecycleReason('');
+    setLifecycleError('');
   };
 
   return <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -313,18 +345,18 @@ export default function MinistryPortal() {
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-100 text-2xl text-emerald-700">✓</div>
           <h3 className="mt-4 font-black">Queue is clear</h3>
           <p className="mt-1 text-sm text-slate-500">There are no credentials awaiting review.</p>
-        </div>:<div className="divide-y divide-slate-100">{queue.map(item=><button key={item.trackingCode} type="button" onClick={()=>selectPending(item)} className={`grid w-full gap-3 border-l-4 px-5 py-5 text-left transition sm:grid-cols-[1fr_1fr_120px] ${selected?.trackingCode===item.trackingCode?'border-emerald-600 bg-emerald-50/70 ring-1 ring-inset ring-emerald-200':'border-transparent hover:bg-emerald-50/40'}`}>
+        </div>:<><div className="divide-y divide-slate-100">{paginatedQueue.map(item=><button key={item.trackingCode} type="button" onClick={()=>selectPending(item)} className={`grid w-full gap-3 border-l-4 px-5 py-5 text-left transition sm:grid-cols-[1fr_1fr_120px] ${selected?.trackingCode===item.trackingCode?'border-emerald-600 bg-emerald-50/70 ring-1 ring-inset ring-emerald-200':'border-transparent hover:bg-emerald-50/40'}`}>
           <div><p className="font-black text-slate-900">{item.studentName}</p><p className="mt-1 text-xs text-slate-500">{item.faculty} · {item.department}</p></div>
           <div><p className="text-sm font-bold text-slate-700">{item.universityName}</p><p className="mt-1 text-xs text-slate-400">{new Date(item.submittedAt).toLocaleDateString()}</p></div>
           <code className="h-fit rounded-lg bg-slate-100 px-2 py-1 text-center text-xs font-black tracking-wider text-slate-700">{item.trackingCode}</code>
-        </button>)}</div>):historyLoading&&!historyLoaded?<div className="px-6 py-20 text-center text-sm font-semibold text-slate-500">Loading processed records...</div>:history.length===0?<div className="px-6 py-20 text-center">
+        </button>)}</div><RecordsPagination page={pendingPage} totalPages={pendingPageCount} onChange={changePendingPage}/></>):historyLoading&&!historyLoaded?<div className="px-6 py-20 text-center text-sm font-semibold text-slate-500">Loading processed records...</div>:history.length===0?<div className="px-6 py-20 text-center">
           <h3 className="font-black text-slate-800">No review history</h3>
           <p className="mt-1 text-sm text-slate-500">Approved and rejected credentials will appear here.</p>
         </div>:filteredHistory.length===0?<div className="px-6 py-20 text-center">
           <Search className="mx-auto h-9 w-9 text-slate-300" strokeWidth={1.5} aria-hidden="true"/>
           <h3 className="mt-4 font-black text-slate-800">No matching history records found.</h3>
           <p className="mt-1 text-sm text-slate-500">Try a different student, university, or archive code.</p>
-        </div>:<div className="divide-y divide-slate-100">{filteredHistory.map(item=><button type="button" key={item.trackingCode} onClick={()=>selectHistory(item)} className={`grid w-full gap-3 border-l-4 px-5 py-5 text-left transition sm:grid-cols-[1fr_1fr_130px] ${selected?.trackingCode===item.trackingCode?'border-emerald-600 bg-emerald-50/70 ring-1 ring-inset ring-emerald-200':'border-transparent hover:bg-slate-50'}`}>
+        </div>:<><div className="divide-y divide-slate-100">{paginatedHistory.map(item=><button type="button" key={item.trackingCode} onClick={()=>selectHistory(item)} className={`grid w-full gap-3 border-l-4 px-5 py-5 text-left transition sm:grid-cols-[1fr_1fr_130px] ${selected?.trackingCode===item.trackingCode?'border-emerald-600 bg-emerald-50/70 ring-1 ring-inset ring-emerald-200':'border-transparent hover:bg-slate-50'}`}>
           <div>
             <div className="flex flex-wrap items-center gap-2"><p className="font-black text-slate-900">{item.studentName}</p><span className={`rounded-full px-2.5 py-1 text-[11px] font-black ${historyStatusClass(item.status)}`}>{item.status}</span></div>
             <p className="mt-1 text-xs text-slate-500">{item.faculty} · {item.department}</p>
@@ -332,10 +364,10 @@ export default function MinistryPortal() {
           </div>
           <div><p className="text-sm font-bold text-slate-700">{item.universityName}</p><p className="mt-1 text-xs text-slate-400">Reviewed {new Date(item.reviewedAt||item.submittedAt).toLocaleDateString()}</p></div>
           <code className="h-fit rounded-lg bg-slate-100 px-2 py-1 text-center text-xs font-black tracking-wider text-slate-700">{item.trackingCode}</code>
-        </button>)}</div>}
+        </button>)}</div><RecordsPagination page={historyPage} totalPages={historyPageCount} onChange={changeHistoryPage}/></>}
       </div>
 
-      <aside className="h-fit rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-24">
+      <aside className="h-fit self-start rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-28">
         {recordsTab==='history'?(selected?<>
           <div className="flex items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-[.2em] text-emerald-300">Finalized audit record</p><span className={`rounded-full px-3 py-1 text-xs font-black ${historyStatusClass(selected.status)}`}>{selected.status}</span></div>
           <h2 className="mt-3 text-2xl font-black">{selected.studentName}</h2>
